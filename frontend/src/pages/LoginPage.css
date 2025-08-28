@@ -1,0 +1,53 @@
+/* Styles for the Login Page */
+body {
+    background-color: #f4f7fc;
+  }
+  
+  .login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  
+  .login-card {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 540px;
+  }
+  
+  .login-header {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  form {
+    width: 100%;
+    max-width: 400px; /* Set a max-width to avoid too wide forms */
+    margin: 0 auto; /* Center the form */
+  }
+  
+  input {
+    width: 100%; /* Make input field take up full width of the form */
+    padding: 10px;
+    margin-bottom: 10px; /* Optional: Adjust spacing between input fields */
+  }
+  
+  .form-group {
+    text-align: left;
+    margin-bottom: 20px;
+  }
+  
+  input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+  }
+   
+  .register-link a {
+    color: #014AB9;
+  }
+  

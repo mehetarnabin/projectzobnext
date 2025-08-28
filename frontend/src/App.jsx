@@ -1,0 +1,93 @@
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from './context/AuthContext.jsx';
+import Layout from "./components/Layout";
+import HomePage from "./pages/HomePage";
+import JobSearchPage from "./pages/JobSearchPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import EmployerRegisterPage from "./pages/EmployerRegisterPage";
+import PostJobPage from "./pages/PostJobPage";
+import JobseekerProfile from "./pages/JobseekerProfile";
+import EmployerDashboard from "./pages/EmployerDashboard";
+import JobSeekerDashboard from "./pages/JobSeekerDashboard";
+import StaffingDashboard from "./pages/StaffingDashboard";
+import EditProfileHeaderPage from "./pages/EditProfileHeaderPage";
+import EditBasicInfo from "./components/Profile/EditBasicInfo";
+import EditAboutMe from "./components/Profile/EditAboutMe";
+import EditEducationList from "./components/Profile/EditEducationList";
+import EditExperienceList from "./components/Profile/EditExperienceList";
+import EditMembershipList from "./components/Profile/EditMembershipList";
+import EditCertificationList from "./components/Profile/EditCertificationList";
+import EditLicenseList from "./components/Profile/EditLicenseList";
+import { ProfileProvider } from "./context/ProfileContext";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import WorkinprogressDashboard from "./pages/WorkinprogressDashboard";
+import ApplyJobPage from './pages/ApplyJobPage';
+import PostedJobsPage from "./pages/PostedJobsPage.jsx";
+import ApplicantsPage from "./pages/ApplicantsPage.jsx";
+import ApplicantDetailsPage from "./pages/ApplicantDetailsPage.jsx";
+import JobApplicantsListPage from './pages/JobApplicantsListPage';
+import ScheduleInterviewPage from './pages/ScheduleInterviewPage';
+
+// NEW IMPORTS FOR EMPLOYER PROFILE
+import EmployerProfilePage from "./pages/EmployerProfilePage.jsx";
+import EditEmployerProfileHeaderPage from "./pages/EditEmployerProfileHeaderPage.jsx";
+import EditEmployerUserProfilePage from "./pages/EditEmployerUserProfilePage.jsx";
+import { EmployerProfileProvider } from "./context/EmployerProfileContext.jsx"; // New context
+
+const App = () => {
+  return (
+    <Router>
+      <AuthProvider>
+        {/* Jobseeker Profile Context */}
+        <ProfileProvider>
+          {/* Employer Profile Context (nested for specific employer routes) */}
+          <EmployerProfileProvider>
+            <Layout>
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/jobs" element={<JobSearchPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/employerregister" element={<EmployerRegisterPage />} />
+                <Route path="/postjob" element={<PostJobPage />} />
+                {/* Jobseeker Profile Route */}
+                <Route path="/profile" element={<JobseekerProfile />} />
+                <Route path="/employer/dashboard" element={<EmployerDashboard />} />
+                <Route path="/jobseeker/dashboard/*" element={<JobSeekerDashboard />} />
+                <Route path="/staffing/dashboard" element={<StaffingDashboard />} />
+                <Route path="/apply-job/:jobId" element={<ApplyJobPage />} />
+                <Route path="/profile/edit-profile-head" element={<EditProfileHeaderPage />} />
+                <Route path="/profile/edit-basic-info" element={<EditBasicInfo />} />
+                <Route path="/profile/edit-about-info" element={<EditAboutMe />} />
+                <Route path="/profile/edit-education" element={<EditEducationList />} />
+                <Route path="/profile/edit-experience" element={<EditExperienceList />} />
+                <Route path="/profile/edit-memberships" element={<EditMembershipList />} />
+                <Route path="/profile/edit-certifications" element={<EditCertificationList />} />
+                <Route path="/profile/edit-licenses" element={<EditLicenseList />} />
+                {/* EMPLOYER ROUTES */}
+                <Route path="/employer/posted-jobs" element={<PostedJobsPage />} />
+                <Route path="/employer/jobs/:jobId/edit" element={<div>Employer Edit Job Page (Coming Soon)</div>} />
+                <Route path="/employer/post-job" element={<div>Employer Post New Job Page (Coming Soon)</div>} />
+                <Route path="/employer/applicants" element={<ApplicantsPage />} />
+                <Route path="/employer/applicants/:applicationId" element={<ApplicantDetailsPage />} />
+                <Route path="/employer/jobs/:jobId/applicants" element={<JobApplicantsListPage />} />
+                <Route path="/employer/applicants/:applicationId/schedule-interview" element={<ScheduleInterviewPage />} />
+
+                {/* NEW EMPLOYER PROFILE ROUTES */}
+                <Route path="/employer/profile" element={<EmployerProfilePage />} />
+                <Route path="/employer/profile/edit-company-header" element={<EditEmployerProfileHeaderPage />} />
+                <Route path="/employer/profile/edit-user-profile" element={<EditEmployerUserProfilePage />} />
+              </Routes>
+              <ToastContainer position="bottom-right" autoClose={3000} />
+            </Layout>
+          </EmployerProfileProvider>
+        </ProfileProvider>
+      </AuthProvider>
+    </Router>
+  );
+};
+
+export default App;

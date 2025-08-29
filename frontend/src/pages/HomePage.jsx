@@ -1,7 +1,7 @@
 import API_BASE_URL from "../config"; // Add this line
 import React from "react";
 import { useState, useEffect } from "react";
-import { MdArrowBackIos, MdArrowForwardIos } from 'react-icons/md';
+import { MdArrowBackIos, MdArrowForwardIos } from "react-icons/md";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -13,6 +13,7 @@ import EmployerCard from "../components/EmployerCard";
 import Slider from "../components/Slider";
 import TabbedSection from "../components/TabbedSection";
 import FeaturedJobs from "../components/FeaturedJobs";
+import DocumentHub from "../components/DocumentHub";
 
 const HomePage = () => {
   const [latestJobs, setLatestJobs] = useState([]);
@@ -38,37 +39,44 @@ const HomePage = () => {
     {
       companyName: "Google",
       tagline: "Organizing the world’s information",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
     },
     {
       companyName: "Microsoft",
       tagline: "Empowering every person on the planet",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_%282012%29.svg",
     },
     {
       companyName: "Amazon",
       tagline: "From A to Z",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg",
     },
     {
       companyName: "Android",
       tagline: "Connecting World",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/5/5e/Android_logo_%282019-2023%29.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/5/5e/Android_logo_%282019-2023%29.svg",
     },
     {
       companyName: "Intel",
       tagline: "Intel company",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/0/0e/Intel_logo_%282020%2C_light_blue%29.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/0/0e/Intel_logo_%282020%2C_light_blue%29.svg",
     },
     {
       companyName: "Lenovo",
       tagline: "Lenovo company",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/b/b8/Lenovo_logo_2015.svg",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/b/b8/Lenovo_logo_2015.svg",
     },
     {
       companyName: "Rolex",
       tagline: "Rolex company",
-      logoUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f4/Logo_da_Rolex.png",
+      logoUrl:
+        "https://upload.wikimedia.org/wikipedia/commons/f/f4/Logo_da_Rolex.png",
     },
   ];
   return (
@@ -81,6 +89,8 @@ const HomePage = () => {
         </div>
       </section>
 
+      <DocumentHub />
+
       <div className="section-container mt-6 p-6 max-w-7xl mx-auto overflow-visible">
         {/* Main Content (inside new container) */}
         <div className="container mx-auto overflow-visible">
@@ -89,21 +99,28 @@ const HomePage = () => {
             <h2 className="text-2xl font-semibold mb-6">Explore by category</h2>
             <div className="relative">
               <div className="-mx-6 px-6 overflow-visible">
-              <Slider
-                slides={["IT", "Healthcare", "Construction", "Education", "Finance", "Marketing"]}
-                renderSlide={(cat) => <CategoryCard title={cat} />}
-                navigation={{
-                  nextEl: ".category-swiper-next",
-                  prevEl: ".category-swiper-prev",
-                }}
-                paginationClassName="category-swiper-pagination"
-                slidesPerView={2}
-                breakpoints={{
-                  640: { slidesPerView: 2 },
-                  768: { slidesPerView: 3 },
-                  1024: { slidesPerView: 4 },
-                }}
-              />    
+                <Slider
+                  slides={[
+                    "IT",
+                    "Healthcare",
+                    "Construction",
+                    "Education",
+                    "Finance",
+                    "Marketing",
+                  ]}
+                  renderSlide={(cat) => <CategoryCard title={cat} />}
+                  navigation={{
+                    nextEl: ".category-swiper-next",
+                    prevEl: ".category-swiper-prev",
+                  }}
+                  paginationClassName="category-swiper-pagination"
+                  slidesPerView={2}
+                  breakpoints={{
+                    640: { slidesPerView: 2 },
+                    768: { slidesPerView: 3 },
+                    1024: { slidesPerView: 4 },
+                  }}
+                />
               </div>
               {/* Custom Navigation Buttons */}
               <div className="category-swiper-prev absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white border border-gray-300 shadow flex items-center justify-center cursor-pointer text-[#003893] hover:bg-[#003893] hover:text-white transition">
@@ -164,27 +181,27 @@ const HomePage = () => {
             <h2 className="text-2xl font-semibold mb-6">Featured Employers</h2>
             <div className="relative">
               <div className="-mx-6 px-6 overflow-visible">
-              <Slider
-                slides={featuredEmployers}
-                renderSlide={(employer) => (
-                  <EmployerCard
-                    companyName={employer.companyName}
-                    tagline={employer.tagline}
-                    logoUrl={employer.logoUrl}
-                  />
-                )}
-                navigation={{
-                  nextEl: ".employer-swiper-next",
-                  prevEl: ".employer-swiper-prev",
-                }}
-                paginationClassName="employer-swiper-pagination"
-                slidesPerView={1}
-                breakpoints={{
-                  640: { slidesPerView: 1 },
-                  768: { slidesPerView: 3 },
-                  1024: { slidesPerView: 5 },
-                }}
-              />
+                <Slider
+                  slides={featuredEmployers}
+                  renderSlide={(employer) => (
+                    <EmployerCard
+                      companyName={employer.companyName}
+                      tagline={employer.tagline}
+                      logoUrl={employer.logoUrl}
+                    />
+                  )}
+                  navigation={{
+                    nextEl: ".employer-swiper-next",
+                    prevEl: ".employer-swiper-prev",
+                  }}
+                  paginationClassName="employer-swiper-pagination"
+                  slidesPerView={1}
+                  breakpoints={{
+                    640: { slidesPerView: 1 },
+                    768: { slidesPerView: 3 },
+                    1024: { slidesPerView: 5 },
+                  }}
+                />
               </div>
               <div className="employer-swiper-prev absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white border border-gray-300 shadow flex items-center justify-center cursor-pointer text-[#003893] hover:bg-[#003893] hover:text-white transition">
                 <MdArrowBackIos size={18} />
@@ -287,7 +304,7 @@ const HomePage = () => {
                   "Civil Engineer",
                   "Delivery Rider",
                   "Data Analyst",
-                  "Call Center Agent",  
+                  "Call Center Agent",
                 ],
               },
               {
@@ -320,7 +337,7 @@ const HomePage = () => {
                   "Pokhara",
                   "Chitwan",
                   "Biratnagar",
-                  "Butwal",  
+                  "Butwal",
                 ],
               },
             ]}

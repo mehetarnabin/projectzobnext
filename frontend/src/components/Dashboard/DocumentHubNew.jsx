@@ -301,11 +301,20 @@ const DocumentHub = () => {
   };
 
   // Toggle action dropdown for specific file
-  const toggleActionDropdown = (fileId) => {
-    setActionDropdowns(prev => ({
-      ...prev,
-      [fileId]: !prev[fileId]
-    }));
+  const toggleActionDropdown = (fileId, event) => {
+    if (actionDropdowns[fileId]) {
+      setActionDropdowns({});
+    } else {
+      setActionDropdowns({
+        [fileId]: {
+          open: true,
+          position: {
+            top: event.target.getBoundingClientRect().bottom + 5,
+            right: window.innerWidth - event.target.getBoundingClientRect().right
+          }
+        }
+      });
+    }
   };
 
   // Filter files based on search and filter criteria
@@ -442,17 +451,17 @@ const DocumentHub = () => {
         <div className="flex flex-col xl:flex-row gap-4 xl:gap-6">
         
         {/* Left Side Container - Circular Hub Section */}
-        <div className="w-full xl:w-1/2">
+        <div className="w-full xl:w-[30%]">
           <div className="flex justify-start xl:justify-start xl:pl-0 xl:-ml-12">
-            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[450px] lg:h-[450px] flex items-center justify-center">
+            <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] flex items-center justify-center overflow-visible">
               
               {/* Connecting Lines - Right Half Only */}
-              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 450 450">
+              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 380 380">
                 {categories.map((category) => {
-                  const centerX = 225;
-                  const centerY = 225;
-                  const innerRadius = 85;  // Start from edge of central hub
-                  const outerRadius = 180; // End at category circles
+                  const centerX = 190;
+                  const centerY = 190;
+                  const innerRadius = 75;  // Start from edge of central hub
+                  const outerRadius = 150; // End at category circles
                   
                   const position = getCircularPosition(category.angle, 1);
                   const startX = centerX + (position.x * innerRadius);
@@ -477,23 +486,23 @@ const DocumentHub = () => {
               </svg>
 
               {/* Central Hub Circle - Fixed Position */}
-              <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 bg-white rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-gray-200 z-30 relative">
-                <FileText size={32} className="text-gray-600 mb-1" />
-                <span className="text-sm sm:text-base font-bold text-gray-700">Document</span>
-                <span className="text-sm sm:text-base font-bold text-gray-700">HUB</span>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-30 lg:h-30 bg-white rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-gray-200 z-30 relative">
+                <FileText size={28} className="text-gray-600 mb-1" />
+                <span className="text-xs sm:text-sm font-bold text-gray-700">Document</span>
+                <span className="text-xs sm:text-sm font-bold text-gray-700">HUB</span>
               </div>
 
               {/* Circular Progress Ring - Right Half Only */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-44 h-44 sm:w-48 sm:h-48 lg:w-52 lg:h-52">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
+                <div className="w-36 h-36 sm:w-40 sm:h-40 lg:w-44 lg:h-44">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
                     {/* Background circle - full circle */}
                     <circle
-                      cx="80"
-                      cy="80"
-                      r="70"
+                      cx="70"
+                      cy="70"
+                      r="60"
                       stroke="#E5E7EB"
-                      strokeWidth="8"
+                      strokeWidth="6"
                       fill="none"
                     />
                     {/* Progress segments - only for right half (180 degrees) */}
@@ -504,14 +513,14 @@ const DocumentHub = () => {
                       const endAngle = startAngle + segmentAngle - 2; // Small gap between segments
                       
                       // Convert to SVG path for arc
-                      const radius = 70;
+                      const radius = 60;
                       const startRadian = (startAngle * Math.PI) / 180;
                       const endRadian = (endAngle * Math.PI) / 180;
                       
-                      const startX = 80 + radius * Math.cos(startRadian);
-                      const startY = 80 + radius * Math.sin(startRadian);
-                      const endX = 80 + radius * Math.cos(endRadian);
-                      const endY = 80 + radius * Math.sin(endRadian);
+                      const startX = 70 + radius * Math.cos(startRadian);
+                      const startY = 70 + radius * Math.sin(startRadian);
+                      const endX = 70 + radius * Math.cos(endRadian);
+                      const endY = 70 + radius * Math.sin(endRadian);
                       
                       const largeArcFlag = segmentAngle > 180 ? 1 : 0;
                       
@@ -520,7 +529,7 @@ const DocumentHub = () => {
                           key={category.id}
                           d={`M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
                           stroke={category.active ? category.color : '#E5E7EB'}
-                          strokeWidth="8"
+                          strokeWidth="6"
                           fill="none"
                           className="transition-all duration-500"
                         />
@@ -532,21 +541,26 @@ const DocumentHub = () => {
 
               {/* Category Buttons positioned around right half - Fixed Positions */}
               {categories.map((category) => {
-                const position = getCircularPosition(category.angle, 180);
+                const position = getCircularPosition(category.angle, 150);
+                
+                // Calculate tooltip position based on angle to keep consistent distance from circle
+                const tooltipDistance = 25; // Distance from circle edge
+                const tooltipPosition = getCircularPosition(category.angle, tooltipDistance);
+                
                 return (
                   <div 
                     key={category.id} 
-                    className="absolute z-40 group"
+                    className="absolute z-[100] group"
                     style={{
                       left: `calc(50% + ${position.x}px)`,
                       top: `calc(50% + ${position.y}px)`,
                       transform: 'translate(-50%, -50%)'
                     }}
                   >
-                    <div className="flex flex-col items-center">
+                    <div className="relative">
                       <button
                         onClick={() => setActiveCategory(category.id)}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 relative ${
+                        className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 relative z-[101] ${
                           activeCategory === category.id 
                             ? 'text-white border-white' 
                             : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
@@ -559,9 +573,18 @@ const DocumentHub = () => {
                         {category.icon}
                       </button>
                       
-                      {/* Category Label - Only visible on hover */}
-                      <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">{category.name}</span>
+                      {/* Category Label - Positioned outside circle with consistent spacing */}
+                      <div 
+                        className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[200] pointer-events-none"
+                        style={{
+                          left: `${tooltipPosition.x}px`,
+                          top: `${tooltipPosition.y}px`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap shadow-2xl border border-gray-700">
+                          {category.name}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -572,13 +595,13 @@ const DocumentHub = () => {
         </div>
 
         {/* Right Side Container - Upload Section */}
-        <div className="w-full xl:w-1/2 xl:pl-8">
+        <div className="w-full xl:w-[70%] xl:pl-8">
           <div className="flex justify-center xl:justify-start">
-            <div className="w-full max-w-md xl:max-w-lg space-y-6">
+            <div className="w-full max-w-none space-y-6">
             {/* Upload Area */}
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
               <div
-                className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all duration-300 ${
+                className={`border-2 border-dashed rounded-xl p-4 sm:p-5 text-center transition-all duration-300 ${
                   dragActive 
                     ? 'border-teal-500 bg-teal-50' 
                     : 'border-gray-300 hover:border-gray-400'
@@ -588,14 +611,15 @@ const DocumentHub = () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="flex items-center justify-center mb-4">
+                <div className="flex items-center justify-center mb-3">
                   <CloudUpload size={24} className="text-gray-400 mr-2" />
-                  <span className="text-gray-600 font-medium">Drag and drop or</span>
+                  <span className="text-sm font-medium text-gray-600">Drag and drop files here or</span>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Maximum Files Size 5MB</p>
+                <p className="text-xs text-gray-500 mb-3">Maximum Files Size 5MB • Supports PDF, Images, Documents</p>
                 
-                <label className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-full cursor-pointer hover:bg-green-600 transition-colors shadow-lg text-sm">
-                  <Plus size={16} className="mr-1" />
+                <label className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-full cursor-pointer hover:bg-green-600 transition-colors shadow-lg text-xs font-medium">
+                  <Plus size={16} className="mr-2" />
+                  Choose Files
                   <input
                     type="file"
                     multiple
@@ -608,18 +632,18 @@ const DocumentHub = () => {
 
             {/* Uploaded Documents */}
             {getFilteredFiles().length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-lg font-semibold text-gray-800">Uploaded Documents</h3>
+              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                  <h3 className="text-lg font-bold text-gray-800">Uploaded Documents</h3>
                   <p className="text-sm text-gray-600 mt-1">Manage your uploaded files for {getCurrentCategoryName()}</p>
                 </div>
                 
                 {/* Table */}
-                <div className="w-full max-h-60 overflow-auto">
+                <div className="w-full overflow-visible">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-6">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-10">
                           <input
                             type="checkbox"
                             checked={selectedFiles.length === getFilteredFiles().length && getFilteredFiles().length > 0}
@@ -630,51 +654,51 @@ const DocumentHub = () => {
                                 setSelectedFiles([]);
                               }
                             }}
-                            className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                           />
                         </th>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 tracking-wider">
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider">
                           Document Title
                         </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
                           Category
                         </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
                           Size
                         </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-10">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-14">
                           Type
                         </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
                           Date
                         </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-16">
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {getFilteredFiles().map((file) => (
-                        <tr key={file.id} className={`hover:bg-gray-50 transition-colors ${
-                          selectedFiles.includes(file.id) ? 'bg-blue-50' : ''
+                      {getFilteredFiles().map((file, index) => (
+                        <tr key={file.id} className={`hover:bg-gray-50 transition-colors duration-150 ${
+                          selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
                         }`}>
-                          <td className="px-1 py-1 whitespace-nowrap">
+                          <td className="px-3 py-3 whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={selectedFiles.includes(file.id)}
                               onChange={() => toggleFileSelection(file.id)}
-                              className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                             />
                           </td>
-                          <td className="px-2 py-1 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center">
-                              <div className="flex-shrink-0 mr-1">
+                              <div className="flex-shrink-0 mr-2">
                                 {getFileIcon(file.name)}
                               </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-medium text-gray-900 truncate max-w-24">{file.name}</div>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-xs font-medium text-gray-900 truncate max-w-48">{file.name}</div>
                                 {file.progress < 100 && (
-                                  <div className="w-12 h-1 bg-gray-200 rounded-full mt-1">
+                                  <div className="w-24 h-1 bg-gray-200 rounded-full mt-1">
                                     <div 
                                       className="h-full bg-blue-500 rounded-full transition-all duration-300" 
                                       style={{ width: `${file.progress}%` }}
@@ -684,35 +708,39 @@ const DocumentHub = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-1 py-1 whitespace-nowrap">
-                            <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800">
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
                               {file.category.slice(0, 3)}
                             </span>
                           </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs text-gray-900">
+                          <td className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
                             {file.size}
                           </td>
-                          <td className="px-1 py-1 whitespace-nowrap">
-                            <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+                          <td className="px-3 py-3 whitespace-nowrap">
+                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                               {file.fileType.slice(0, 3)}
                             </span>
                           </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs text-gray-900">
+                          <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600">
                             {file.dateUploaded.slice(5)}
                           </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs font-medium relative">
-                            <div className="action-dropdown">
+                          <td className="px-3 py-3 whitespace-nowrap text-xs font-medium">
+                            <div className="action-dropdown relative">
                               <button
-                                onClick={() => toggleActionDropdown(file.id)}
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                                onClick={(e) => toggleActionDropdown(file.id, e)}
+                                className="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                                 title="Actions"
                               >
-                                <ChevronDown size={12} />
+                                <ChevronDown size={14} />
                               </button>
                               
                               {/* Dropdown Menu */}
-                              {actionDropdowns[file.id] && (
-                                <div className="absolute right-0 top-8 z-50 bg-white border border-gray-300 rounded-lg shadow-xl py-1 w-20">
+                              {actionDropdowns[file.id]?.open && (
+                                <div className="fixed z-[999] bg-white border border-gray-300 rounded-lg shadow-xl py-1 w-20"
+                                     style={{
+                                       top: `${actionDropdowns[file.id].position.top}px`,
+                                       right: `${actionDropdowns[file.id].position.right}px`
+                                     }}>
                                   <button
                                     onClick={() => {
                                       handleViewFile(file);
@@ -720,7 +748,7 @@ const DocumentHub = () => {
                                     }}
                                     className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 flex items-center"
                                   >
-                                    <Eye size={10} className="mr-1" />
+                                    <Eye size={12} className="mr-1" />
                                     View
                                   </button>
                                   <button
@@ -730,7 +758,7 @@ const DocumentHub = () => {
                                     }}
                                     className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 flex items-center text-red-600"
                                   >
-                                    <Trash2 size={10} className="mr-1" />
+                                    <Trash2 size={12} className="mr-1" />
                                     Delete
                                   </button>
                                 </div>
@@ -744,11 +772,11 @@ const DocumentHub = () => {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="text-center">
-                  <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                  <p className="text-gray-500">
+                  <FileText size={40} className="mx-auto text-gray-400 mb-3" />
+                  <h3 className="text-base font-medium text-gray-900 mb-2">No Documents Found</h3>
+                  <p className="text-sm text-gray-500">
                     {getCurrentCategoryFiles().length === 0 
                       ? `No files uploaded for ${getCurrentCategoryName()}` 
                       : 'No files match your search/filter criteria'

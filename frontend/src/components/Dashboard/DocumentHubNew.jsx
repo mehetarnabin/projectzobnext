@@ -438,18 +438,21 @@ const DocumentHub = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 xl:gap-16 items-start">
-          {/* Left Side - Circular Hub - Fixed Grid Column */}
-          <div className="flex justify-center xl:justify-end">
-            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] flex items-center justify-center">
+        {/* Main Content - Two Column Layout */}
+        <div className="flex flex-col xl:flex-row gap-4 xl:gap-6">
+        
+        {/* Left Side Container - Circular Hub Section */}
+        <div className="w-full xl:w-1/2">
+          <div className="flex justify-start xl:justify-start xl:pl-0 xl:-ml-12">
+            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[450px] lg:h-[450px] flex items-center justify-center">
               
               {/* Connecting Lines - Right Half Only */}
-              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 500 500">
+              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 450 450">
                 {categories.map((category) => {
-                  const centerX = 250;
-                  const centerY = 250;
-                  const innerRadius = 95;  // Start from edge of central hub
-                  const outerRadius = 200; // End at category circles
+                  const centerX = 225;
+                  const centerY = 225;
+                  const innerRadius = 85;  // Start from edge of central hub
+                  const outerRadius = 180; // End at category circles
                   
                   const position = getCircularPosition(category.angle, 1);
                   const startX = centerX + (position.x * innerRadius);
@@ -529,7 +532,7 @@ const DocumentHub = () => {
 
               {/* Category Buttons positioned around right half - Fixed Positions */}
               {categories.map((category) => {
-                const position = getCircularPosition(category.angle, 200);
+                const position = getCircularPosition(category.angle, 180);
                 return (
                   <div 
                     key={category.id} 
@@ -566,8 +569,10 @@ const DocumentHub = () => {
               })}
             </div>
           </div>
+        </div>
 
-          {/* Right Side - Upload Section - Fixed Grid Column */}
+        {/* Right Side Container - Upload Section */}
+        <div className="w-full xl:w-1/2 xl:pl-8">
           <div className="flex justify-center xl:justify-start">
             <div className="w-full max-w-md xl:max-w-lg space-y-6">
             {/* Upload Area */}
@@ -788,6 +793,8 @@ const DocumentHub = () => {
             </div>
           </div>
         </div>
+        
+        </div> {/* End Main Content Container */}
       </div>
     </div>
   );

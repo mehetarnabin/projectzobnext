@@ -89,8 +89,16 @@ export const ProfileProvider = ({ children }) => {
             toast.error("Session expired. Please log in again.");
             logout(); // Log out the user if the token is invalid/expired
         }
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch profile");
+        // Handle non-JSON responses (like HTML error pages)
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to fetch profile");
+        } else {
+          // Server returned HTML instead of JSON (probably 404 or server error)
+          console.warn("Server returned non-JSON response, likely backend route not found");
+          throw new Error("Backend API not available. Please check if Laravel server is running.");
+        }
       }
 
       const data = await response.json(); // Access the entire response object directly
@@ -142,7 +150,13 @@ export const ProfileProvider = ({ children }) => {
       setProfileData(processedData);
     } catch (err) {
       setError(err.message);
-      toast.error(`Error fetching profile: ${err.message}`);
+      // Only show toast error if it's not the common HTML response issue
+      if (!err.message.includes("Backend API not available")) {
+        toast.error(`Error fetching profile: ${err.message}`);
+      } else {
+        // Silent handling for backend connectivity issues
+        console.warn("Backend API not available - this is expected during development");
+      }
       console.error("Error fetching profile:", err);
     } finally {
       setLoading(false);

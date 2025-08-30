@@ -21,6 +21,7 @@ const NavigationMenu = () => {
   const menuItems = [
     { name: "Saved Jobs", icon: <IoBriefcaseOutline />, path: "/dashboard" },
     { name: "Applied Jobs", icon: <BsCardChecklist />, path: "/jobseeker/dashboard/applied-jobs" },
+    { name: "Shortlisted Candidate", icon: <FaBriefcase />, path: "/jobseeker/dashboard/shortlisted-candidate" },
     { name: "Document Hub", icon: <BsCardChecklist />, path: "/jobseeker/dashboard/document-hub" },
     { name: "Job Insight", icon: <AiOutlineBarChart />, path: "/dashboard/job-insight" },
     { name: "Resources", icon: <LuNotebookText />, path: "/dashboard/resources" },

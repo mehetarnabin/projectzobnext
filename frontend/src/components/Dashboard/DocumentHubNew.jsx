@@ -18,7 +18,9 @@ import {
   Trash2,
   Eye,
   Download,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const DocumentHub = () => {
@@ -316,21 +318,6 @@ const DocumentHub = () => {
     console.log('Filter changed to:', type);
   };
 
-  const handleRefresh = () => {
-    // Refresh the current category files
-    console.log('Refreshing files for category:', getCurrentCategoryName());
-    
-    // Clear all filters and search
-    setSearchTerm('');
-    setFilterType('all');
-    setSelectedFiles([]);
-    setShowSearch(false);
-    setShowFilter(false);
-    
-    // Show confirmation
-    alert(`Refreshed ${getCurrentCategoryName()} category`);
-  };
-
   const handleDeleteSelected = () => {
     if (selectedFiles.length > 0) {
       const categoryName = getCurrentCategoryName();
@@ -403,9 +390,17 @@ const DocumentHub = () => {
     if (actionDropdowns[fileId]) {
       setActionDropdowns({});
     } else {
+      // Calculate button position for dropdown positioning
+      const buttonRect = event.target.getBoundingClientRect();
+      const position = {
+        top: buttonRect.bottom + 5, // 5px below the button
+        left: buttonRect.left + (buttonRect.width / 2) // Center with button
+      };
+      
       setActionDropdowns({
         [fileId]: {
-          open: true
+          open: true,
+          position: position
         }
       });
     }
@@ -487,7 +482,7 @@ const DocumentHub = () => {
 
   return (
     <div className="p-2 sm:p-4 lg:p-6 bg-white min-h-screen overflow-x-hidden">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4">
+      <div className="max-w-full mx-auto px-2 sm:px-4">
         {/* Header with Title and Action Buttons */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Document Hub File upload section</h1>
@@ -558,15 +553,6 @@ const DocumentHub = () => {
                 </div>
               )}
             </div>
-
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
-              title="Refresh"
-            >
-              <RotateCcw size={18} />
-            </button>
 
             {/* Delete Selected Button */}
             <button
@@ -868,8 +854,8 @@ const DocumentHub = () => {
                   </div>
                   
                   {/* Table */}
-                  <div className="w-full overflow-visible relative">
-                    <table className="w-full text-xs">
+                  <div className="w-full relative overflow-visible" style={{ isolation: 'isolate', overflow: 'visible' }}>
+                    <table className="w-full text-xs table-fixed">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                           <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-10">
@@ -886,13 +872,13 @@ const DocumentHub = () => {
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                             />
                           </th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider">
+                          <th className="pl-1 pr-0 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-48">
                             Document Title
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
+                          <th className="pl-1 pr-1 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
                             Category
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
+                          <th className="px-5 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
                             Size
                           </th>
                           <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-14">
@@ -908,10 +894,9 @@ const DocumentHub = () => {
                       </thead>
                     <tbody className="bg-white divide-y divide-gray-200 relative">
                       {getFilteredFiles().map((file, index) => (
-                        <React.Fragment key={file.id}>
-                          <tr className={`hover:bg-gray-50 transition-colors duration-150 relative ${
-                            selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
-                          }`}>
+                        <tr key={file.id} data-file-id={file.id} className={`hover:bg-gray-50 transition-colors duration-150 relative ${
+                          selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
+                        }`}>
                             <td className="px-3 py-3 whitespace-nowrap">
                               <input
                                 type="checkbox"
@@ -920,13 +905,15 @@ const DocumentHub = () => {
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                               />
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <div className="flex items-center">
+                            <td className="pl-1 pr-0 py-3 whitespace-nowrap w-48 max-w-48">
+                              <div className="flex items-center overflow-hidden">
                                 <div className="flex-shrink-0 mr-2">
                                   {getFileIcon(file.name)}
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-xs font-medium text-gray-900 truncate max-w-48">{file.name}</div>
+                                <div className="min-w-0 flex-1 overflow-hidden">
+                                  <div className="text-xs font-medium text-gray-900 truncate w-32" title={file.name}>
+                                    {file.name}
+                                  </div>
                                   {file.progress < 100 && (
                                     <div className="w-24 h-1 bg-gray-200 rounded-full mt-1">
                                       <div 
@@ -938,7 +925,7 @@ const DocumentHub = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap relative overflow-visible">
+                            <td className="pl-1 pr-1 py-3 whitespace-nowrap relative overflow-visible">
                               {file.fileType === 'PDF' || file.fileType === 'Document' ? (
                                 <div className="category-dropdown relative overflow-visible">
                                   <button
@@ -977,7 +964,7 @@ const DocumentHub = () => {
                                 </span>
                               )}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
+                            <td className="px-5 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
                               {file.size}
                             </td>
                             <td className="px-3 py-3 whitespace-nowrap">
@@ -988,8 +975,8 @@ const DocumentHub = () => {
                             <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600">
                               {file.dateUploaded}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-xs font-medium">
-                              <div className="action-dropdown relative">
+                            <td className="px-3 py-3 whitespace-nowrap text-xs font-medium relative overflow-visible">
+                              <div className="action-dropdown relative flex justify-end overflow-visible">
                                 <button
                                   onClick={(e) => toggleActionDropdown(file.id, e)}
                                   className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
@@ -999,59 +986,70 @@ const DocumentHub = () => {
                                   }`}
                                   title="Actions"
                                 >
-                                  <ChevronDown 
-                                    size={14} 
-                                    className={`transition-transform duration-200 ${
-                                      actionDropdowns[file.id]?.open ? 'rotate-180' : ''
-                                    }`} 
-                                  />
+                                  {actionDropdowns[file.id]?.open ? (
+                                    <ChevronDown size={14} className="transition-all duration-200 rotate-180" />
+                                  ) : (
+                                    <ChevronDown size={14} className="transition-all duration-200" />
+                                  )}
                                 </button>
+                                
+                                {/* Dropdown Menu - Positioned to stay within viewport */}
+                                {actionDropdowns[file.id]?.open && (
+                                  <>
+                                    {/* Full screen backdrop */}
+                                    <div 
+                                      className="fixed inset-0 bg-transparent z-[9998]" 
+                                      onClick={() => setActionDropdowns({})}
+                                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                                    />
+                                    
+                                    <div 
+                                      className="fixed bg-white border-2 border-gray-300 rounded-lg py-1 flex space-x-0 min-w-max z-[9999]"
+                                      style={{ 
+                                        position: 'fixed',
+                                        top: actionDropdowns[file.id]?.position?.top + 'px' || '50px',
+                                        left: actionDropdowns[file.id]?.position?.left + 'px' || '50px',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                                        transform: 'translateX(-50%)',
+                                        zIndex: 9999
+                                      }}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          handleViewFile(file);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200 first:rounded-l-lg"
+                                        title="View"
+                                      >
+                                        <Eye size={18} className="text-gray-600 group-hover:text-blue-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          handleDownloadFile(file);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200"
+                                        title="Download"
+                                      >
+                                        <Download size={18} className="text-gray-600 group-hover:text-blue-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          removeFile(file.id);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-red-50 transition-colors group last:rounded-r-lg"
+                                        title="Delete"
+                                      >
+                                        <X size={18} className="text-gray-600 group-hover:text-red-600" />
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </td>
                           </tr>
-                          
-                          {/* Expanded Row for Actions Dropdown */}
-                          {actionDropdowns[file.id]?.open && (
-                            <tr className="bg-gray-50 border-t border-gray-200">
-                              <td colSpan="7" className="px-0 py-0">
-                                <div className="flex justify-end px-4 py-3">
-                                  <div className="bg-white border border-gray-300 rounded-lg shadow-lg py-2 w-32 mr-4">
-                                    <button
-                                      onClick={() => {
-                                        handleViewFile(file);
-                                        setActionDropdowns({});
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 flex items-center transition-colors"
-                                    >
-                                      <Eye size={12} className="mr-2" />
-                                      View
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        handleDownloadFile(file);
-                                        setActionDropdowns({});
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 flex items-center text-blue-600 transition-colors"
-                                    >
-                                      <Download size={12} className="mr-2" />
-                                      Download
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        removeFile(file.id);
-                                        setActionDropdowns({});
-                                      }}
-                                      className="w-full text-left px-3 py-2 text-xs hover:bg-gray-100 flex items-center text-red-600 transition-colors"
-                                    >
-                                      <Trash2 size={12} className="mr-2" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

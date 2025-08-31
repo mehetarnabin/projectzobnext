@@ -72,6 +72,7 @@ const DocumentHub = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [actionDropdowns, setActionDropdowns] = useState({}); // For file action dropdowns
+  const [categoryDropdowns, setCategoryDropdowns] = useState({}); // For category dropdowns
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -88,16 +89,20 @@ const DocumentHub = () => {
       if (!event.target.closest('.action-dropdown')) {
         setActionDropdowns({});
       }
+      // Close category dropdowns if clicked outside
+      if (!event.target.closest('.category-dropdown')) {
+        setCategoryDropdowns({});
+      }
     };
 
-    if (showSearch || showFilter || Object.keys(actionDropdowns).length > 0) {
+    if (showSearch || showFilter || Object.keys(actionDropdowns).length > 0 || Object.keys(categoryDropdowns).length > 0) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showSearch, showFilter, actionDropdowns]);
+  }, [showSearch, showFilter, actionDropdowns, categoryDropdowns]);
 
   // Handle drag events
   const handleDrag = (e) => {
@@ -314,6 +319,49 @@ const DocumentHub = () => {
           }
         }
       });
+    }
+  };
+
+  // Toggle category dropdown for specific file
+  const toggleCategoryDropdown = (fileId, event) => {
+    event.stopPropagation();
+    if (categoryDropdowns[fileId]) {
+      setCategoryDropdowns({});
+    } else {
+      const rect = event.target.getBoundingClientRect();
+      setCategoryDropdowns({
+        [fileId]: {
+          open: true,
+          position: {
+            top: rect.bottom + 5,
+            left: rect.left
+          }
+        }
+      });
+    }
+  };
+
+  // Change file category
+  const changeFileCategory = (fileId, newCategory) => {
+    const currentCategory = getCurrentCategoryName();
+    const file = uploadedFiles[currentCategory]?.find(f => f.id === fileId);
+    
+    if (file && newCategory !== file.category) {
+      // Remove file from current category
+      setUploadedFiles(prev => ({
+        ...prev,
+        [currentCategory]: prev[currentCategory].filter(f => f.id !== fileId)
+      }));
+      
+      // Add file to new category
+      const updatedFile = { ...file, category: newCategory };
+      setUploadedFiles(prev => ({
+        ...prev,
+        [newCategory]: [...(prev[newCategory] || []), updatedFile]
+      }));
+      
+      // Close dropdown
+      setCategoryDropdowns({});
     }
   };
 
@@ -632,14 +680,14 @@ const DocumentHub = () => {
 
             {/* Uploaded Documents */}
             {getFilteredFiles().length > 0 ? (
-              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+              <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-visible">
                 <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
                   <h3 className="text-lg font-bold text-gray-800">Uploaded Documents</h3>
                   <p className="text-sm text-gray-600 mt-1">Manage your uploaded files for {getCurrentCategoryName()}</p>
                 </div>
                 
                 {/* Table */}
-                <div className="w-full overflow-visible">
+                <div className="w-full overflow-visible relative">
                   <table className="w-full text-xs">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
@@ -677,9 +725,9 @@ const DocumentHub = () => {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white divide-y divide-gray-200 relative">
                       {getFilteredFiles().map((file, index) => (
-                        <tr key={file.id} className={`hover:bg-gray-50 transition-colors duration-150 ${
+                        <tr key={file.id} className={`hover:bg-gray-50 transition-colors duration-150 relative ${
                           selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
                         }`}>
                           <td className="px-3 py-3 whitespace-nowrap">
@@ -708,10 +756,44 @@ const DocumentHub = () => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                              {file.category.slice(0, 3)}
-                            </span>
+                          <td className="px-3 py-3 whitespace-nowrap relative overflow-visible">
+                            {file.fileType === 'PDF' || file.fileType === 'Document' ? (
+                              <div className="category-dropdown relative overflow-visible">
+                                <button
+                                  onClick={(e) => toggleCategoryDropdown(file.id, e)}
+                                  className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+                                  title="Change Category"
+                                >
+                                  {file.category}
+                                  <ChevronDown size={12} className="ml-1" />
+                                </button>
+                                
+                                {/* Category Dropdown Menu - Vertical */}
+                                {categoryDropdowns[file.id]?.open && (
+                                  <div className="fixed z-[99999] bg-white border border-gray-300 rounded-lg shadow-2xl py-1 w-36"
+                                       style={{
+                                         top: `${categoryDropdowns[file.id].position.top}px`,
+                                         left: `${categoryDropdowns[file.id].position.left}px`
+                                       }}>
+                                    {categories.map((category) => (
+                                      <button
+                                        key={category.id}
+                                        onClick={() => changeFileCategory(file.id, category.name)}
+                                        className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 block ${
+                                          file.category === category.name ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                        }`}
+                                      >
+                                        {category.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                                {file.category}
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
                             {file.size}
@@ -722,7 +804,7 @@ const DocumentHub = () => {
                             </span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600">
-                            {file.dateUploaded.slice(5)}
+                            {file.dateUploaded}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-xs font-medium">
                             <div className="action-dropdown relative">
@@ -736,7 +818,7 @@ const DocumentHub = () => {
                               
                               {/* Dropdown Menu */}
                               {actionDropdowns[file.id]?.open && (
-                                <div className="fixed z-[999] bg-white border border-gray-300 rounded-lg shadow-xl py-1 w-20"
+                                <div className="fixed z-[999] bg-white border border-gray-300 rounded-lg shadow-xl py-1 w-24"
                                      style={{
                                        top: `${actionDropdowns[file.id].position.top}px`,
                                        right: `${actionDropdowns[file.id].position.right}px`
@@ -750,6 +832,16 @@ const DocumentHub = () => {
                                   >
                                     <Eye size={12} className="mr-1" />
                                     View
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      handleDownloadFile(file);
+                                      setActionDropdowns({});
+                                    }}
+                                    className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 flex items-center text-blue-600"
+                                  >
+                                    <Download size={12} className="mr-1" />
+                                    Download
                                   </button>
                                   <button
                                     onClick={() => {

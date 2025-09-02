@@ -318,6 +318,21 @@ const DocumentHub = () => {
     console.log('Filter changed to:', type);
   };
 
+  const handleRefresh = () => {
+    // Refresh the current category files
+    console.log('Refreshing files for category:', getCurrentCategoryName());
+    
+    // Clear all filters and search
+    setSearchTerm('');
+    setFilterType('all');
+    setSelectedFiles([]);
+    setShowSearch(false);
+    setShowFilter(false);
+    
+    // Show confirmation
+    alert(`Refreshed ${getCurrentCategoryName()} category`);
+  };
+
   const handleDeleteSelected = () => {
     if (selectedFiles.length > 0) {
       const categoryName = getCurrentCategoryName();
@@ -481,8 +496,8 @@ const DocumentHub = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 lg:p-6 bg-white min-h-screen overflow-x-hidden">
-      <div className="max-w-full mx-auto px-2 sm:px-4">
+    <div className="p-2 sm:p-4 lg:p-6 bg-white min-h-screen overflow-x-hidden max-w-full">
+      <div className="max-w-full mx-auto px-2 sm:px-4 overflow-hidden">
         {/* Header with Title and Action Buttons */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Document Hub File upload section</h1>
@@ -515,6 +530,15 @@ const DocumentHub = () => {
                 </div>
               )}
             </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
+              title="Refresh"
+            >
+              <RotateCcw size={18} />
+            </button>
 
             {/* Filter Button */}
             <div className="relative filter-container">
@@ -571,20 +595,20 @@ const DocumentHub = () => {
         </div>
         
         {/* Main Content - Two Column Layout */}
-        <div className="flex flex-col xl:flex-row gap-8 xl:gap-12 min-h-screen">
+        <div className="flex flex-col xl:flex-row gap-12 xl:gap-14 min-h-screen">
         
         {/* Left Side Container - Circular Hub Section */}
         <div className="w-full xl:w-[30%] xl:flex-shrink-0">
-          <div className="flex justify-center xl:justify-start">
-            <div className="relative w-72 h-72 sm:w-80 sm:h-80 lg:w-[350px] lg:h-[350px] flex items-center justify-center overflow-visible">
+          <div className="flex justify-center xl:justify-start xl:-ml-12">
+            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[400px] lg:h-[400px] flex items-center justify-center overflow-visible">
               
               {/* Connecting Lines - Right Half Only */}
-              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 350 350">
+              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 400 400">
                 {categories.map((category) => {
-                  const centerX = 175;
-                  const centerY = 175;
-                  const innerRadius = 70;  // Start from edge of central hub
-                  const outerRadius = 135; // End at category circles
+                  const centerX = 200;
+                  const centerY = 200;
+                  const innerRadius = 80;  // Start from edge of central hub
+                  const outerRadius = 160; // End at category circles - increased gap
                   
                   const position = getCircularPosition(category.angle, 1);
                   const startX = centerX + (position.x * innerRadius);
@@ -664,7 +688,7 @@ const DocumentHub = () => {
 
               {/* Category Buttons positioned around right half - Fixed Positions */}
               {categories.map((category) => {
-                const position = getCircularPosition(category.angle, 135);
+                const position = getCircularPosition(category.angle, 160); // increased radius for more gap
                 
                 // Calculate tooltip position based on angle to keep consistent distance from circle
                 const tooltipDistance = 25; // Distance from circle edge
@@ -718,8 +742,8 @@ const DocumentHub = () => {
         </div>
 
         {/* Right Side Container - Upload Section */}
-        <div className="w-full xl:w-[70%] xl:flex-shrink-0 xl:max-w-none">
-          <div className="w-full pr-4 xl:pr-8">
+        <div className="w-full xl:w-[65%] xl:flex-shrink-0 xl:max-w-none">
+          <div className="w-full pr-1 xl:pr-2 overflow-hidden">
             <div className="space-y-6">
             {/* Upload Area - Fixed Height */}
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 h-auto">
@@ -858,7 +882,7 @@ const DocumentHub = () => {
                     <table className="w-full text-xs table-fixed">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-10">
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-10">
                             <input
                               type="checkbox"
                               checked={selectedFiles.length === getFilteredFiles().length && getFilteredFiles().length > 0}
@@ -872,22 +896,22 @@ const DocumentHub = () => {
                               className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                             />
                           </th>
-                          <th className="pl-1 pr-0 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-48">
+                          <th className="pl-1 pr-0 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-44">
                             Document Title
                           </th>
-                          <th className="pl-1 pr-1 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
+                          <th className="pl-2 pr-1 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-18">
                             Category
                           </th>
-                          <th className="px-5 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
+                          <th className="px-4 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
                             Size
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-14">
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-14">
                             Type
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
                             Date
                           </th>
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
                             Actions
                           </th>
                         </tr>
@@ -897,7 +921,7 @@ const DocumentHub = () => {
                         <tr key={file.id} data-file-id={file.id} className={`hover:bg-gray-50 transition-colors duration-150 relative ${
                           selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
                         }`}>
-                            <td className="px-3 py-3 whitespace-nowrap">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               <input
                                 type="checkbox"
                                 checked={selectedFiles.includes(file.id)}
@@ -905,7 +929,7 @@ const DocumentHub = () => {
                                 className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                               />
                             </td>
-                            <td className="pl-1 pr-0 py-3 whitespace-nowrap w-48 max-w-48">
+                            <td className="pl-1 pr-0 py-2 whitespace-nowrap w-44 max-w-44">
                               <div className="flex items-center overflow-hidden">
                                 <div className="flex-shrink-0 mr-2">
                                   {getFileIcon(file.name)}
@@ -925,7 +949,7 @@ const DocumentHub = () => {
                                 </div>
                               </div>
                             </td>
-                            <td className="pl-1 pr-1 py-3 whitespace-nowrap relative overflow-visible">
+                            <td className="pl-2 pr-1 py-2 whitespace-nowrap relative overflow-visible">
                               {file.fileType === 'PDF' || file.fileType === 'Document' ? (
                                 <div className="category-dropdown relative overflow-visible">
                                   <button
@@ -964,18 +988,18 @@ const DocumentHub = () => {
                                 </span>
                               )}
                             </td>
-                            <td className="px-5 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
+                            <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
                               {file.size}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap">
+                            <td className="px-3 py-2 whitespace-nowrap">
                               <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
                                 {file.fileType.slice(0, 3)}
                               </span>
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600">
+                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
                               {file.dateUploaded}
                             </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-xs font-medium relative overflow-visible">
+                            <td className="px-3 py-2 whitespace-nowrap text-xs font-medium relative overflow-visible">
                               <div className="action-dropdown relative flex justify-end overflow-visible">
                                 <button
                                   onClick={(e) => toggleActionDropdown(file.id, e)}

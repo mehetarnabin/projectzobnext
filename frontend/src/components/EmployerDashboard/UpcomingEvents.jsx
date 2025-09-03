@@ -1,22 +1,40 @@
-// src/components/EmployerDashboard/UpcomingEvents.jsx
-import API_BASE_URL from "../../config"; // Add this line
+import API_BASE_URL from "../../config";
 import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, ChevronRight, Clock, Video, Phone, MapPin } from 'lucide-react'; // Added Clock, Video, Phone, MapPin
-import { format, isToday, parseISO } from 'date-fns'; // Added isToday, parseISO
-import { useAuth } from '../../context/AuthContext'; // Import useAuth
+import { CalendarDays, ChevronRight, Clock, Video, Phone, MapPin, Edit, Trash2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { useAuth } from '../../context/AuthContext';
 import { toast } from 'react-toastify';
 
-// const API_BASE_URL = "http://10.120.30.250:8000/api";
+// Dummy events for demo
+const demoEvents = [
+  {
+    id: 101,
+    interviewDate: "2025-09-05",
+    interviewTime: "11:00",
+    interviewType: "online",
+    interviewLink: "https://zoom.us/demo-link",
+    applicantName: "Demo User 1",
+    jobTitle: "Demo Developer"
+  },
+  {
+    id: 102,
+    interviewDate: "2025-09-06",
+    interviewTime: "15:00",
+    interviewType: "in-person",
+    interviewLink: "Demo Office, Kathmandu",
+    applicantName: "Demo User 2",
+    jobTitle: "Demo Designer"
+  },
+];
 
 const UpcomingEvents = () => {
     const { token, user } = useAuth();
     const [currentDate, setCurrentDate] = useState('');
-    const [scheduledInterviews, setScheduledInterviews] = useState([]);
+    const [scheduledInterviews, setScheduledInterviews] = useState(demoEvents); // start with demo events
     const [loadingEvents, setLoadingEvents] = useState(true);
     const [errorEvents, setErrorEvents] = useState(null);
 
     useEffect(() => {
-        // Set current date on component mount
         setCurrentDate(format(new Date(), 'EEEE, MMMM do, yyyy'));
     }, []);
 
@@ -44,20 +62,18 @@ const UpcomingEvents = () => {
             }
 
             const data = await response.json();
-            // Filter interviews to only show those scheduled for today or later
             const filteredInterviews = data.interviews.filter(interview => {
                 const interviewDateTime = parseISO(`${interview.interviewDate}T${interview.interviewTime}`);
-                return interviewDateTime >= new Date(); // Only show future or current events
+                return interviewDateTime >= new Date();
             });
 
-            // Sort by date and then time
             filteredInterviews.sort((a, b) => {
                 const dateA = parseISO(`${a.interviewDate}T${a.interviewTime}`);
                 const dateB = parseISO(`${b.interviewDate}T${b.interviewTime}`);
                 return dateA.getTime() - dateB.getTime();
             });
 
-            setScheduledInterviews(filteredInterviews);
+            setScheduledInterviews(filteredInterviews.length ? filteredInterviews : demoEvents); // fallback to demo
         } catch (err) {
             console.error("Error fetching scheduled interviews:", err);
             setErrorEvents(err.message || "Failed to load scheduled interviews.");
@@ -69,35 +85,34 @@ const UpcomingEvents = () => {
 
     useEffect(() => {
         fetchScheduledInterviews();
-        // Optionally, refetch every few minutes for real-time updates
-        const interval = setInterval(fetchScheduledInterviews, 5 * 60 * 1000); // Refetch every 5 minutes
-        return () => clearInterval(interval); // Cleanup on unmount
+        const interval = setInterval(fetchScheduledInterviews, 5 * 60 * 1000);
+        return () => clearInterval(interval);
     }, [fetchScheduledInterviews]);
+
+    const handleEdit = (id) => {
+        console.log("Edit event", id);
+        toast.info(`Edit event ${id} clicked`);
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm("Are you sure you want to delete this event?")) {
+            setScheduledInterviews(scheduledInterviews.filter(ev => ev.id !== id));
+            toast.success("Event deleted successfully");
+        }
+    };
 
     const renderEventDetails = (interview) => {
         let icon;
-        let detailText;
         switch (interview.interviewType) {
-            case 'online':
-                icon = <Video size={14} className="inline-block mr-1" />;
-                detailText = interview.interviewLink;
-                break;
-            case 'in-person':
-                icon = <MapPin size={14} className="inline-block mr-1" />;
-                detailText = interview.interviewLink; // Reusing interviewLink for location
-                break;
-            case 'phone':
-                icon = <Phone size={14} className="inline-block mr-1" />;
-                detailText = interview.interviewLink; // Reusing interviewLink for phone number
-                break;
-            default:
-                icon = null;
-                detailText = '';
+            case 'online': icon = <Video size={14} className="inline-block mr-1" />; break;
+            case 'in-person': icon = <MapPin size={14} className="inline-block mr-1" />; break;
+            case 'phone': icon = <Phone size={14} className="inline-block mr-1" />; break;
+            default: icon = null;
         }
 
         return (
             <p className="text-xs text-gray-500">
-                {icon} {detailText}
+                {icon} {interview.interviewLink}
                 {interview.interviewers && interview.interviewers.length > 0 && (
                     <span className="ml-2"> | Interviewers: {interview.interviewers.join(', ')}</span>
                 )}
@@ -123,17 +138,25 @@ const UpcomingEvents = () => {
                 <div className="text-center text-gray-500 py-4">Loading upcoming events...</div>
             ) : errorEvents ? (
                 <div className="text-center text-red-500 py-4">Error: {errorEvents}</div>
-            ) : scheduledInterviews.length === 0 ? (
-                <div className="text-center text-gray-500 py-4">No upcoming interviews scheduled.</div>
             ) : (
                 <div className="space-y-3 flex-grow overflow-y-auto">
                     {scheduledInterviews.map(interview => (
-                        <div key={interview.id} className="border-l-4 border-blue-500 pl-3 py-2 bg-blue-50 rounded-r-md">
-                            <p className="text-sm font-medium text-gray-900">
-                                <Clock size={14} className="inline-block mr-1" />
-                                {format(parseISO(`${interview.interviewDate}T${interview.interviewTime}`), 'hh:mm a')} - Interview with {interview.applicantName} for {interview.jobTitle}
-                            </p>
-                            {renderEventDetails(interview)}
+                        <div key={interview.id} className="border-l-4 border-blue-500 pl-3 py-2 bg-blue-50 rounded-r-md flex justify-between items-start">
+                            <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                    <Clock size={14} className="inline-block mr-1" />
+                                    {format(parseISO(`${interview.interviewDate}T${interview.interviewTime}`), 'hh:mm a')} - Interview with {interview.applicantName} for {interview.jobTitle}
+                                </p>
+                                {renderEventDetails(interview)}
+                            </div>
+                            <div className="flex space-x-2 mt-1">
+                                <button onClick={() => handleEdit(interview.id)} className="text-blue-500 hover:text-blue-700" title="Edit">
+                                    <Edit size={16} />
+                                </button>
+                                <button onClick={() => handleDelete(interview.id)} className="text-red-500 hover:text-red-700" title="Delete">
+                                    <Trash2 size={16} />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>

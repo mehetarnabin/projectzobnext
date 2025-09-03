@@ -24,7 +24,7 @@ const NavigationMenu = () => {
     { name: "Resources", icon: <LuNotebookText /> },
     { name: "Resume Builder", icon: <FaRegFileLines /> },
     { name: "Companies", icon: <BsBuildings /> },
-    { name: "Events", icon: <SlEvent /> }
+    { name: "Events", icon: <SlEvent />, path:"/employer/eventpage"}
   ];
 
   return (

@@ -1,4 +1,4 @@
-// EventDetailPage.jsx
+// EventDetailsPage.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Mail, Share2 } from 'lucide-react';
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/useToast';
 import api from '../api/axios'; // Your axios instance
+import { Helmet } from 'react-helmet';
 
 const EventDetailsPage = () => {
   const { id } = useParams();
@@ -30,12 +31,11 @@ const EventDetailsPage = () => {
 
   if (!event) return <p className="text-center mt-10">Loading event details...</p>;
 
-  const generateShareLink = () => `${window.location.origin}/event/${event.id}`;
-
+  const shareUrl = `https://yourdomain.com/event/${event.id}`; // Replace with your deployed domain
 
   const copyLink = async () => {
     try {
-      await navigator.clipboard.writeText(generateShareLink());
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast({ title: 'Link Copied', description: 'Event share link copied to clipboard' });
@@ -46,6 +46,21 @@ const EventDetailsPage = () => {
 
   return (
     <div className="min-h-screen bg-background py-8">
+      {/* Dynamic OG + Twitter Meta Tags */}
+      <Helmet>
+        <title>{event.title}</title>
+        <meta property="og:title" content={event.title} />
+        <meta property="og:description" content={event.description || ''} />
+        <meta property="og:image" content={event.imageUrl || ''} />
+        <meta property="og:url" content={shareUrl} />
+        <meta property="og:type" content="website" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={event.title} />
+        <meta name="twitter:description" content={event.description || ''} />
+        <meta name="twitter:image" content={event.imageUrl || ''} />
+      </Helmet>
+
       <div className="container mx-auto px-6">
         {/* Event Image */}
         {event.imageUrl && (
@@ -62,7 +77,11 @@ const EventDetailsPage = () => {
         <div className="flex flex-col md:flex-row md:justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold text-foreground">{event.title}</h1>
           <div className="flex gap-3">
-            <Button onClick={copyLink} variant={copied ? 'success' : 'outline'} className="flex items-center gap-2 rounded-4xl">
+            <Button
+              onClick={copyLink}
+              variant={copied ? 'success' : 'outline'}
+              className="flex items-center gap-2 rounded-4xl"
+            >
               <Share2 className="h-4 w-4" />
               {copied ? 'Copied' : 'Copy Link'}
             </Button>

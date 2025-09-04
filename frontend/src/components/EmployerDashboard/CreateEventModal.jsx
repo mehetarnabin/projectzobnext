@@ -1,28 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
-import { useToast } from '@/hooks/useToast';
+import React, { useState, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import { useToast } from "@/hooks/useToast";
 
 export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    date: '',
-    time: '',
-    location: '',
-    organizer: '',
-    category: 'upcoming',
-    imageUrl: '', // store image URL
+    title: "",
+    description: "",
+    date: "",
+    time: "",
+    location: "",
+    organizer: "",
+    category: "upcoming",
     tags: [],
   });
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
@@ -35,7 +34,6 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
         location: editEvent.location,
         organizer: editEvent.organizer,
         category: editEvent.category,
-        imageUrl: editEvent.imageUrl || '',
         tags: editEvent.tags || [],
       });
       setImageFile(null);
@@ -53,46 +51,40 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
       return;
     }
 
-    // Convert file to URL if selected
-    let imageUrl = formData.imageUrl;
-    if (imageFile) {
-      imageUrl = URL.createObjectURL(imageFile);
-    }
-
+    // Build payload
     const eventData = {
       ...formData,
-      imageUrl,
+      image: imageFile || undefined, // 🔹 send actual file if uploaded
     };
 
-    onSave(eventData);
+    await onSave(eventData);
     onClose();
 
     toast({
       title: editEvent ? "Event Updated" : "Event Created",
-      description: `${formData.title} has been ${editEvent ? 'updated' : 'created'} successfully`,
-      variant: "default",
+      description: `${formData.title} has been ${editEvent ? "updated" : "created"} successfully`,
     });
   };
 
   const addTag = () => {
     if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         tags: [...prev.tags, tagInput.trim()],
       }));
-      setTagInput('');
+      setTagInput("");
     }
   };
 
   const removeTag = (tag) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      tags: prev.tags.filter(t => t !== tag),
+      tags: prev.tags.filter((t) => t !== tag),
     }));
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       addTag();
     }
@@ -103,19 +95,18 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
       <DialogContent className="w-3/4 max-w-[90vw] bg-white rounded-4xl shadow-md p-6">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold text-[#003893]">
-            {editEvent ? 'Edit Event' : 'Create New Event'}
+            {editEvent ? "Edit Event" : "Create New Event"}
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-
           {/* Left Column */}
           <div>
             <Label htmlFor="title">Event Title *</Label>
             <Input
               id="title"
               value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
               placeholder="Enter event title"
               className="mt-1 w-full border-gray-200 rounded-4xl p-2"
               required
@@ -125,7 +116,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
             <Textarea
               id="description"
               value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
               placeholder="Describe your event"
               className="mt-1 w-full min-h-[100px] border-gray-200 rounded-4xl p-2"
             />
@@ -135,7 +126,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
               id="date"
               type="date"
               value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
               className="mt-1 w-full border-gray-200 rounded-4xl p-2"
               required
             />
@@ -145,7 +136,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
               id="time"
               type="time"
               value={formData.time}
-              onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, time: e.target.value }))}
               className="mt-1 w-full border-gray-200 rounded-4xl p-2"
               required
             />
@@ -154,7 +145,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
             <Input
               id="location"
               value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
               placeholder="Event location"
               className="mt-1 w-full border-gray-200 rounded-4xl p-2"
               required
@@ -166,7 +157,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
             <Label htmlFor="category">Status</Label>
             <Select
               value={formData.category}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
+              onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
             >
               <SelectTrigger className="mt-1 w-full rounded-4xl">
                 <SelectValue />
@@ -182,7 +173,7 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
             <Input
               id="organizer"
               value={formData.organizer}
-              onChange={(e) => setFormData(prev => ({ ...prev, organizer: e.target.value }))}
+              onChange={(e) => setFormData((prev) => ({ ...prev, organizer: e.target.value }))}
               placeholder="Organizer name"
               className="mt-1 w-full border-gray-200 rounded-4xl p-2"
             />
@@ -202,7 +193,6 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
                 className="mt-2 w-full h-40 object-cover rounded-2xl border border-gray-200"
               />
             )}
-
 
             <Label htmlFor="tags" className="mt-4">Tags</Label>
             <div className="flex gap-2 mt-1">
@@ -248,9 +238,8 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
               variant="outline"
               className="flex-1 text-[#003893] border-[#003893] rounded-4xl hover:bg-[#003893] hover:text-white"
             >
-              {editEvent ? 'Update Event' : 'Create Event'}
+              {editEvent ? "Update Event" : "Create Event"}
             </Button>
-
           </div>
         </form>
       </DialogContent>

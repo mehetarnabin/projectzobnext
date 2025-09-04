@@ -24,7 +24,7 @@ class EventController extends Controller
         'location'      => $event->location,
         'organizer'     => $event->organizer,
         'category'      => $event->category,
-        
+        'imageUrl'    => $event->image_url ? asset('storage/' . $event->image_url) : null,
         'tags'          => $event->tags,
     ];
 }

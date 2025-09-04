@@ -4,6 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, Share2, Edit, Trash } from "lucide-react";
 
+// Base API URL (from .env, fallback to localhost)
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
 const EventCard = ({ event, onEdit, onDelete, onShare }) => {
   const formattedDate = event.date
     ? new Date(event.date).toLocaleDateString("en-US", {
@@ -13,18 +16,22 @@ const EventCard = ({ event, onEdit, onDelete, onShare }) => {
       })
     : "TBA";
 
+  // EventCard.jsx
+const imageUrl = event.imageUrl || null;
+
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-gray-200">
       {/* Event image */}
-      {event.imageUrl && (
+      {imageUrl && (
         <div className="h-40 overflow-hidden">
           <img
-            src={event.imageUrl}
+            src={imageUrl}
             alt={event.title}
             className="w-full h-full object-cover"
           />
         </div>
-      )}
+        )}
+
 
       <CardHeader>
         <CardTitle className="text-lg font-semibold line-clamp-1">

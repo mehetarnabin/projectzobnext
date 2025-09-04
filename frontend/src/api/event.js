@@ -17,9 +17,13 @@ export const fetchEvents = async () => {
   return response.data;
 };
 
-// Create new event (supports image upload)
 export const createEvent = async (eventData) => {
-  const formData = buildFormData(eventData);
+  const formData = new FormData();
+  for (const key in eventData) {
+    if (eventData[key] !== null && eventData[key] !== undefined) {
+      formData.append(key, eventData[key]); // This will append the file correctly
+    }
+  }
 
   const response = await api.post("/events", formData, {
     headers: { "Content-Type": "multipart/form-data" },

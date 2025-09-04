@@ -14,6 +14,8 @@ import EmployerDashboard from "./pages/EmployerDashboard";
 
 import EventCard from "./components/EmployerDashboard/EventCard.jsx";
 import EventPage from "./pages/EventPage.jsx";
+import EventDetailsPage from './pages/EventDetailsPage';
+
 
 
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
@@ -87,6 +89,8 @@ const App = () => {
                 <Route path="employer/EventCard" element={<EventCard />}/>
               
                 <Route path="/employer/eventpage" element={<EventPage />} />
+                <Route path="/employer/event/:id" element={<EventDetailsPage />} />
+                <Route path="/event/:id" element={<EventDetailsPage />} />
 
 
                 {/* NEW EMPLOYER PROFILE ROUTES */}

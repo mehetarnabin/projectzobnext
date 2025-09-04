@@ -24,7 +24,7 @@ class EventController extends Controller
         'location'      => $event->location,
         'organizer'     => $event->organizer,
         'category'      => $event->category,
-        
+        'imageUrl'    => $event->image_url ? asset('storage/' . $event->image_url) : null,
         'tags'          => $event->tags,
     ];
 }
@@ -139,38 +139,6 @@ public function destroy($id)
     return response()->json(['message' => 'Event deleted successfully']);
 }
 
-
-
-public function share(Request $request, $id)
-{
-    $event = Event::findOrFail($id);
-
-    $validated = $request->validate([
-        'senderName'    => 'required|string|max:255',
-        'senderEmail'   => 'required|email',
-        'recipients'    => 'required|array|min:1',
-        'recipients.*'  => 'email',
-        'subject'       => 'required|string|max:255',
-        'message'       => 'nullable|string',
-    ]);
-
-    foreach ($validated['recipients'] as $recipient) {
-        Mail::send('emails.event-invite', [
-            'event'       => $event,
-            'senderName'  => $validated['senderName'],
-            'customMsg'   => $validated['message'] ?? '',
-        ], function ($mail) use ($recipient, $validated) {
-            $mail->to($recipient)
-                ->from($validated['senderEmail'], $validated['senderName'])
-                ->subject($validated['subject']);
-        });
-    }
-
-    return response()->json([
-        'message' => 'Invitations sent successfully',
-        'recipients' => $validated['recipients'],
-    ]);
-}
 
 
 }

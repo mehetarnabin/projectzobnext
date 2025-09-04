@@ -53,19 +53,12 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
       return;
     }
 
-    // Convert file to URL if selected
-    let imageUrl = formData.imageUrl;
-    if (imageFile) {
-      imageUrl = URL.createObjectURL(imageFile);
-    }
-
     const eventData = {
       ...formData,
-      imageUrl,
+      image: imageFile, // <-- send the actual file here
     };
-
     onSave(eventData);
-    onClose();
+
 
     toast({
       title: editEvent ? "Event Updated" : "Event Created",

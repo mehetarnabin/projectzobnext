@@ -18,7 +18,9 @@ import {
   Trash2,
   Eye,
   Download,
-  ChevronDown
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const DocumentHub = () => {
@@ -72,6 +74,26 @@ const DocumentHub = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showFilter, setShowFilter] = useState(false);
   const [actionDropdowns, setActionDropdowns] = useState({}); // For file action dropdowns
+  const [categoryDropdowns, setCategoryDropdowns] = useState({}); // For category dropdowns
+
+  // New states for file upload UI flow
+  const [pendingFiles, setPendingFiles] = useState([]); // Files waiting to be uploaded
+  const [uploadErrors, setUploadErrors] = useState([]);
+  const [uploadSuccess, setUploadSuccess] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // File validation constants
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  const ALLOWED_FILE_TYPES = {
+    'pdf': 'PDF',
+    'jpg': 'Image', 
+    'jpeg': 'Image',
+    'png': 'Image',
+    'gif': 'Image',
+    'webp': 'Image',
+    'doc': 'Document',
+    'docx': 'Document'
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -88,16 +110,40 @@ const DocumentHub = () => {
       if (!event.target.closest('.action-dropdown')) {
         setActionDropdowns({});
       }
+      // Close category dropdowns if clicked outside
+      if (!event.target.closest('.category-dropdown')) {
+        setCategoryDropdowns({});
+      }
     };
 
-    if (showSearch || showFilter || Object.keys(actionDropdowns).length > 0) {
+    if (showSearch || showFilter || Object.keys(actionDropdowns).length > 0 || Object.keys(categoryDropdowns).length > 0) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showSearch, showFilter, actionDropdowns]);
+  }, [showSearch, showFilter, actionDropdowns, categoryDropdowns]);
+
+  // Auto-clear success messages after 5 seconds
+  useEffect(() => {
+    if (uploadSuccess.length > 0) {
+      const timer = setTimeout(() => {
+        setUploadSuccess([]);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [uploadSuccess]);
+
+  // Auto-clear error messages after 10 seconds
+  useEffect(() => {
+    if (uploadErrors.length > 0) {
+      const timer = setTimeout(() => {
+        setUploadErrors([]);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [uploadErrors]);
 
   // Handle drag events
   const handleDrag = (e) => {
@@ -121,53 +167,106 @@ const DocumentHub = () => {
     }
   };
 
-  // Handle file selection
+  // Handle file selection with validation
   const handleFiles = (files) => {
     const activeCategoryName = categories.find(cat => cat.id === activeCategory)?.name || 'Personal';
+    const newErrors = [];
+    const newPendingFiles = [];
+    
+    // Clear previous messages
+    setUploadErrors([]);
+    setUploadSuccess([]);
     
     Array.from(files).forEach(file => {
-      if (file.size <= 5 * 1024 * 1024) { // 5MB limit
-        const fileExtension = file.name.split('.').pop().toLowerCase();
-        let fileType = 'Document';
-        
-        if (['pdf'].includes(fileExtension)) {
-          fileType = 'PDF';
-        } else if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
-          fileType = 'Image';
-        } else if (['doc', 'docx'].includes(fileExtension)) {
-          fileType = 'Document';
-        }
-        
-        const newFile = {
-          id: Date.now() + Math.random(),
-          name: file.name,
-          size: `${(file.size / (1024 * 1024)).toFixed(1)}MB`,
-          progress: 0,
-          category: activeCategoryName,
-          fileType: fileType,
-          dateUploaded: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
-        };
-        
-        setUploadedFiles(prev => ({
-          ...prev,
-          [activeCategoryName]: [...(prev[activeCategoryName] || []), newFile]
-        }));
-        
-        // Simulate upload progress
-        let progress = 0;
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+      
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        newErrors.push(`${file.name}: File size exceeds 5MB limit.`);
+        return;
+      }
+      
+      // Validate file type
+      if (!ALLOWED_FILE_TYPES[fileExtension]) {
+        newErrors.push(`${file.name}: Invalid file format. Allowed formats: PDF, JPG, PNG, DOC, DOCX.`);
+        return;
+      }
+      
+      // File is valid, add to pending files
+      const newFile = {
+        id: Date.now() + Math.random(),
+        name: file.name,
+        size: `${(file.size / (1024 * 1024)).toFixed(1)}MB`,
+        actualSize: file.size,
+        progress: 0,
+        category: activeCategoryName,
+        fileType: ALLOWED_FILE_TYPES[fileExtension],
+        dateUploaded: new Date().toISOString().split('T')[0],
+        file: file // Keep reference to actual file object
+      };
+      
+      newPendingFiles.push(newFile);
+    });
+    
+    // Set errors if any
+    if (newErrors.length > 0) {
+      setUploadErrors(newErrors);
+    }
+    
+    // Add valid files to pending
+    if (newPendingFiles.length > 0) {
+      setPendingFiles(prev => [...prev, ...newPendingFiles]);
+    }
+  };
+
+  // Remove file from pending list
+  const removePendingFile = (fileId) => {
+    setPendingFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  // Upload pending files
+  const uploadPendingFiles = () => {
+    if (pendingFiles.length === 0) return;
+    
+    setIsUploading(true);
+    const activeCategoryName = categories.find(cat => cat.id === activeCategory)?.name || 'Personal';
+    
+    // Simulate upload process
+    pendingFiles.forEach((file, index) => {
+      setTimeout(() => {
+        // Update progress
         const interval = setInterval(() => {
-          progress += 10;
+          setPendingFiles(prev => 
+            prev.map(f => 
+              f.id === file.id 
+                ? { ...f, progress: Math.min(f.progress + 10, 100) }
+                : f
+            )
+          );
+        }, 100);
+        
+        // Complete upload after 1 second
+        setTimeout(() => {
+          clearInterval(interval);
+          
+          // Move to uploaded files
           setUploadedFiles(prev => ({
             ...prev,
-            [activeCategoryName]: prev[activeCategoryName].map(f => 
-              f.id === newFile.id ? { ...f, progress } : f
-            )
+            [activeCategoryName]: [...(prev[activeCategoryName] || []), { ...file, progress: 100 }]
           }));
-          if (progress >= 100) {
-            clearInterval(interval);
+          
+          // Remove from pending
+          setPendingFiles(prev => prev.filter(f => f.id !== file.id));
+          
+          // Add success message
+          setUploadSuccess(prev => [...prev, `${file.name} uploaded successfully.`]);
+          
+          // Check if all files are uploaded
+          if (index === pendingFiles.length - 1) {
+            setIsUploading(false);
           }
-        }, 200);
-      }
+        }, 1000);
+      }, index * 200); // Stagger uploads
     });
   };
 
@@ -301,11 +400,68 @@ const DocumentHub = () => {
   };
 
   // Toggle action dropdown for specific file
-  const toggleActionDropdown = (fileId) => {
-    setActionDropdowns(prev => ({
-      ...prev,
-      [fileId]: !prev[fileId]
-    }));
+  const toggleActionDropdown = (fileId, event) => {
+    event.stopPropagation();
+    if (actionDropdowns[fileId]) {
+      setActionDropdowns({});
+    } else {
+      // Calculate button position for dropdown positioning
+      const buttonRect = event.target.getBoundingClientRect();
+      const position = {
+        top: buttonRect.bottom + 5, // 5px below the button
+        left: buttonRect.left + (buttonRect.width / 2) // Center with button
+      };
+      
+      setActionDropdowns({
+        [fileId]: {
+          open: true,
+          position: position
+        }
+      });
+    }
+  };
+
+  // Toggle category dropdown for specific file
+  const toggleCategoryDropdown = (fileId, event) => {
+    event.stopPropagation();
+    if (categoryDropdowns[fileId]) {
+      setCategoryDropdowns({});
+    } else {
+      const rect = event.target.getBoundingClientRect();
+      setCategoryDropdowns({
+        [fileId]: {
+          open: true,
+          position: {
+            top: rect.bottom + 5,
+            left: rect.left
+          }
+        }
+      });
+    }
+  };
+
+  // Change file category
+  const changeFileCategory = (fileId, newCategory) => {
+    const currentCategory = getCurrentCategoryName();
+    const file = uploadedFiles[currentCategory]?.find(f => f.id === fileId);
+    
+    if (file && newCategory !== file.category) {
+      // Remove file from current category
+      setUploadedFiles(prev => ({
+        ...prev,
+        [currentCategory]: prev[currentCategory].filter(f => f.id !== fileId)
+      }));
+      
+      // Add file to new category
+      const updatedFile = { ...file, category: newCategory };
+      setUploadedFiles(prev => ({
+        ...prev,
+        [newCategory]: [...(prev[newCategory] || []), updatedFile]
+      }));
+      
+      // Close dropdown
+      setCategoryDropdowns({});
+    }
   };
 
   // Filter files based on search and filter criteria
@@ -340,8 +496,8 @@ const DocumentHub = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 bg-white min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-2 sm:p-4 lg:p-6 bg-white min-h-screen overflow-x-hidden max-w-full">
+      <div className="max-w-full mx-auto px-2 sm:px-4 overflow-hidden">
         {/* Header with Title and Action Buttons */}
         <div className="flex items-center justify-between mb-6 sm:mb-8">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Document Hub File upload section</h1>
@@ -374,6 +530,15 @@ const DocumentHub = () => {
                 </div>
               )}
             </div>
+
+            {/* Refresh Button */}
+            <button
+              onClick={handleRefresh}
+              className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
+              title="Refresh"
+            >
+              <RotateCcw size={18} />
+            </button>
 
             {/* Filter Button */}
             <div className="relative filter-container">
@@ -413,15 +578,6 @@ const DocumentHub = () => {
               )}
             </div>
 
-            {/* Refresh Button */}
-            <button
-              onClick={handleRefresh}
-              className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center transition-all duration-200"
-              title="Refresh"
-            >
-              <RotateCcw size={18} />
-            </button>
-
             {/* Delete Selected Button */}
             <button
               onClick={handleDeleteSelected}
@@ -438,18 +594,21 @@ const DocumentHub = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 xl:gap-16 items-start">
-          {/* Left Side - Circular Hub - Fixed Grid Column */}
-          <div className="flex justify-center xl:justify-end">
-            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[500px] lg:h-[500px] flex items-center justify-center">
+        {/* Main Content - Two Column Layout */}
+        <div className="flex flex-col xl:flex-row gap-12 xl:gap-14 min-h-screen">
+        
+        {/* Left Side Container - Circular Hub Section */}
+        <div className="w-full xl:w-[30%] xl:flex-shrink-0">
+          <div className="flex justify-center xl:justify-start xl:-ml-12">
+            <div className="relative w-80 h-80 sm:w-96 sm:h-96 lg:w-[400px] lg:h-[400px] flex items-center justify-center overflow-visible">
               
               {/* Connecting Lines - Right Half Only */}
-              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 500 500">
+              <svg className="absolute inset-0 w-full h-full z-10" viewBox="0 0 400 400">
                 {categories.map((category) => {
-                  const centerX = 250;
-                  const centerY = 250;
-                  const innerRadius = 95;  // Start from edge of central hub
-                  const outerRadius = 200; // End at category circles
+                  const centerX = 200;
+                  const centerY = 200;
+                  const innerRadius = 80;  // Start from edge of central hub
+                  const outerRadius = 160; // End at category circles - increased gap
                   
                   const position = getCircularPosition(category.angle, 1);
                   const startX = centerX + (position.x * innerRadius);
@@ -474,23 +633,23 @@ const DocumentHub = () => {
               </svg>
 
               {/* Central Hub Circle - Fixed Position */}
-              <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 bg-white rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-gray-200 z-30 relative">
-                <FileText size={32} className="text-gray-600 mb-1" />
-                <span className="text-sm sm:text-base font-bold text-gray-700">Document</span>
-                <span className="text-sm sm:text-base font-bold text-gray-700">HUB</span>
+              <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-30 lg:h-30 bg-white rounded-full shadow-2xl flex flex-col items-center justify-center border-4 border-gray-200 z-30 relative">
+                <FileText size={28} className="text-gray-600 mb-1" />
+                <span className="text-xs sm:text-sm font-bold text-gray-700">Document</span>
+                <span className="text-xs sm:text-sm font-bold text-gray-700">HUB</span>
               </div>
 
               {/* Circular Progress Ring - Right Half Only */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
-                <div className="w-44 h-44 sm:w-48 sm:h-48 lg:w-52 lg:h-52">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
+                <div className="w-36 h-36 sm:w-40 sm:h-40 lg:w-44 lg:h-44">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
                     {/* Background circle - full circle */}
                     <circle
-                      cx="80"
-                      cy="80"
-                      r="70"
+                      cx="70"
+                      cy="70"
+                      r="60"
                       stroke="#E5E7EB"
-                      strokeWidth="8"
+                      strokeWidth="6"
                       fill="none"
                     />
                     {/* Progress segments - only for right half (180 degrees) */}
@@ -501,14 +660,14 @@ const DocumentHub = () => {
                       const endAngle = startAngle + segmentAngle - 2; // Small gap between segments
                       
                       // Convert to SVG path for arc
-                      const radius = 70;
+                      const radius = 60;
                       const startRadian = (startAngle * Math.PI) / 180;
                       const endRadian = (endAngle * Math.PI) / 180;
                       
-                      const startX = 80 + radius * Math.cos(startRadian);
-                      const startY = 80 + radius * Math.sin(startRadian);
-                      const endX = 80 + radius * Math.cos(endRadian);
-                      const endY = 80 + radius * Math.sin(endRadian);
+                      const startX = 70 + radius * Math.cos(startRadian);
+                      const startY = 70 + radius * Math.sin(startRadian);
+                      const endX = 70 + radius * Math.cos(endRadian);
+                      const endY = 70 + radius * Math.sin(endRadian);
                       
                       const largeArcFlag = segmentAngle > 180 ? 1 : 0;
                       
@@ -517,7 +676,7 @@ const DocumentHub = () => {
                           key={category.id}
                           d={`M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`}
                           stroke={category.active ? category.color : '#E5E7EB'}
-                          strokeWidth="8"
+                          strokeWidth="6"
                           fill="none"
                           className="transition-all duration-500"
                         />
@@ -529,21 +688,26 @@ const DocumentHub = () => {
 
               {/* Category Buttons positioned around right half - Fixed Positions */}
               {categories.map((category) => {
-                const position = getCircularPosition(category.angle, 200);
+                const position = getCircularPosition(category.angle, 160); // increased radius for more gap
+                
+                // Calculate tooltip position based on angle to keep consistent distance from circle
+                const tooltipDistance = 25; // Distance from circle edge
+                const tooltipPosition = getCircularPosition(category.angle, tooltipDistance);
+                
                 return (
                   <div 
                     key={category.id} 
-                    className="absolute z-40 group"
+                    className="absolute z-[100] group"
                     style={{
                       left: `calc(50% + ${position.x}px)`,
                       top: `calc(50% + ${position.y}px)`,
                       transform: 'translate(-50%, -50%)'
                     }}
                   >
-                    <div className="flex flex-col items-center">
+                    <div className="relative">
                       <button
                         onClick={() => setActiveCategory(category.id)}
-                        className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-18 lg:h-18 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 relative ${
+                        className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-110 border-2 relative z-[101] ${
                           activeCategory === category.id 
                             ? 'text-white border-white' 
                             : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'
@@ -556,9 +720,18 @@ const DocumentHub = () => {
                         {category.icon}
                       </button>
                       
-                      {/* Category Label - Only visible on hover */}
-                      <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <span className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">{category.name}</span>
+                      {/* Category Label - Positioned outside circle with consistent spacing */}
+                      <div 
+                        className="absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-[200] pointer-events-none"
+                        style={{
+                          left: `${tooltipPosition.x}px`,
+                          top: `${tooltipPosition.y}px`,
+                          transform: 'translate(-50%, -50%)'
+                        }}
+                      >
+                        <div className="bg-gray-900 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap shadow-2xl border border-gray-700">
+                          {category.name}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -566,14 +739,16 @@ const DocumentHub = () => {
               })}
             </div>
           </div>
+        </div>
 
-          {/* Right Side - Upload Section - Fixed Grid Column */}
-          <div className="flex justify-center xl:justify-start">
-            <div className="w-full max-w-md xl:max-w-lg space-y-6">
-            {/* Upload Area */}
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+        {/* Right Side Container - Upload Section */}
+        <div className="w-full xl:w-[65%] xl:flex-shrink-0 xl:max-w-none">
+          <div className="w-full pr-1 xl:pr-2 overflow-hidden">
+            <div className="space-y-6">
+            {/* Upload Area - Fixed Height */}
+            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 h-auto">
               <div
-                className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center transition-all duration-300 ${
+                className={`border-2 border-dashed rounded-xl p-6 sm:p-8 transition-all duration-300 relative ${
                   dragActive 
                     ? 'border-teal-500 bg-teal-50' 
                     : 'border-gray-300 hover:border-gray-400'
@@ -583,167 +758,332 @@ const DocumentHub = () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="flex items-center justify-center mb-4">
-                  <CloudUpload size={24} className="text-gray-400 mr-2" />
-                  <span className="text-gray-600 font-medium">Drag and drop or</span>
+                <div className="flex items-center justify-between">
+                  {/* Left side content */}
+                  <div className="flex items-center gap-4">
+                    {/* Cloud Upload Icon */}
+                    <CloudUpload size={40} className="text-gray-400" />
+                    
+                    {/* Text content */}
+                    <div>
+                      <span className="text-base font-medium text-gray-600">Drag and drop or</span>
+                    </div>
+                  </div>
+                  
+                  {/* Green Plus Button positioned on the right */}
+                  <div>
+                    <label className="flex items-center justify-center w-12 h-12 bg-green-500 text-white rounded-full cursor-pointer hover:bg-green-600 transition-colors shadow-lg">
+                      <Plus size={24} />
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx"
+                        onChange={(e) => handleFiles(e.target.files)}
+                      />
+                    </label>
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Maximum Files Size 5MB</p>
-                
-                <label className="inline-flex items-center px-4 py-2 bg-green-500 text-white rounded-full cursor-pointer hover:bg-green-600 transition-colors shadow-lg text-sm">
-                  <Plus size={16} className="mr-1" />
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                </label>
               </div>
+              
+              {/* Maximum file size text - positioned below the upload box */}
+              <p className="text-sm text-gray-500 mt-3 text-center">Maximum File Size: 5MB</p>
+              
+              {/* Error Messages */}
+              {uploadErrors.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {uploadErrors.map((error, index) => (
+                    <div key={index} className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
+                      <X size={16} className="flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Success Messages */}
+              {uploadSuccess.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {uploadSuccess.map((message, index) => (
+                    <div key={index} className="flex items-center gap-2 text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
+                      <CheckCircle size={16} className="flex-shrink-0" />
+                      <span>{message}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Pending Files Preview */}
+              {pendingFiles.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-semibold text-gray-800">Files Ready for Upload</h4>
+                    {!isUploading && (
+                      <button
+                        onClick={uploadPendingFiles}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                      >
+                        Upload All Files
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {pendingFiles.map((file) => (
+                      <div key={file.id} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText size={20} className="text-gray-500" />
+                          <div>
+                            <p className="font-medium text-gray-900 text-sm">{file.name}</p>
+                            <p className="text-xs text-gray-500">{file.size} • {file.fileType}</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                          {/* Progress Bar */}
+                          {file.progress > 0 && (
+                            <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 transition-all duration-300"
+                                style={{ width: `${file.progress}%` }}
+                              ></div>
+                            </div>
+                          )}
+                          
+                          {/* Delete Button */}
+                          {!isUploading && (
+                            <button
+                              onClick={() => removePendingFile(file.id)}
+                              className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                              title="Remove file"
+                            >
+                              <X size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Uploaded Documents */}
-            {getFilteredFiles().length > 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                  <h3 className="text-lg font-semibold text-gray-800">Uploaded Documents</h3>
-                  <p className="text-sm text-gray-600 mt-1">Manage your uploaded files for {getCurrentCategoryName()}</p>
-                </div>
-                
-                {/* Table */}
-                <div className="w-full max-h-60 overflow-auto">
-                  <table className="w-full text-xs">
-                    <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                      <tr>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-6">
-                          <input
-                            type="checkbox"
-                            checked={selectedFiles.length === getFilteredFiles().length && getFilteredFiles().length > 0}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedFiles(getFilteredFiles().map(f => f.id));
-                              } else {
-                                setSelectedFiles([]);
-                              }
-                            }}
-                            className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                          />
-                        </th>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-500 tracking-wider">
-                          Document Title
-                        </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
-                          Category
-                        </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
-                          Size
-                        </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-10">
-                          Type
-                        </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-12">
-                          Date
-                        </th>
-                        <th className="px-1 py-1 text-left text-xs font-medium text-gray-500 tracking-wider w-16">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {getFilteredFiles().map((file) => (
-                        <tr key={file.id} className={`hover:bg-gray-50 transition-colors ${
-                          selectedFiles.includes(file.id) ? 'bg-blue-50' : ''
-                        }`}>
-                          <td className="px-1 py-1 whitespace-nowrap">
+            <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-visible min-h-[400px]">
+              {getFilteredFiles().length > 0 ? (
+                <>
+                  <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+                    <h3 className="text-lg font-bold text-gray-800">Uploaded Documents</h3>
+                    <p className="text-sm text-gray-600 mt-1">Manage your uploaded files for {getCurrentCategoryName()}</p>
+                  </div>
+                  
+                  {/* Table */}
+                  <div className="w-full relative overflow-visible" style={{ isolation: 'isolate', overflow: 'visible' }}>
+                    <table className="w-full text-xs table-fixed">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-10">
                             <input
                               type="checkbox"
-                              checked={selectedFiles.includes(file.id)}
-                              onChange={() => toggleFileSelection(file.id)}
-                              className="w-3 h-3 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                              checked={selectedFiles.length === getFilteredFiles().length && getFilteredFiles().length > 0}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedFiles(getFilteredFiles().map(f => f.id));
+                                } else {
+                                  setSelectedFiles([]);
+                                }
+                              }}
+                              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                             />
-                          </td>
-                          <td className="px-2 py-1 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 mr-1">
-                                {getFileIcon(file.name)}
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-medium text-gray-900 truncate max-w-24">{file.name}</div>
-                                {file.progress < 100 && (
-                                  <div className="w-12 h-1 bg-gray-200 rounded-full mt-1">
-                                    <div 
-                                      className="h-full bg-blue-500 rounded-full transition-all duration-300" 
-                                      style={{ width: `${file.progress}%` }}
-                                    />
+                          </th>
+                          <th className="pl-1 pr-0 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-44">
+                            Document Title
+                          </th>
+                          <th className="pl-2 pr-1 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-18">
+                            Category
+                          </th>
+                          <th className="px-4 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
+                            Size
+                          </th>
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-14">
+                            Type
+                          </th>
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-20">
+                            Date
+                          </th>
+                          <th className="px-3 py-1.5 text-left text-xs font-semibold text-gray-600 tracking-wider w-16">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                    <tbody className="bg-white divide-y divide-gray-200 relative">
+                      {getFilteredFiles().map((file, index) => (
+                        <tr key={file.id} data-file-id={file.id} className={`hover:bg-gray-50 transition-colors duration-150 relative ${
+                          selectedFiles.includes(file.id) ? 'bg-blue-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
+                        }`}>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={selectedFiles.includes(file.id)}
+                                onChange={() => toggleFileSelection(file.id)}
+                                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                              />
+                            </td>
+                            <td className="pl-1 pr-0 py-2 whitespace-nowrap w-44 max-w-44">
+                              <div className="flex items-center overflow-hidden">
+                                <div className="flex-shrink-0 mr-2">
+                                  {getFileIcon(file.name)}
+                                </div>
+                                <div className="min-w-0 flex-1 overflow-hidden">
+                                  <div className="text-xs font-medium text-gray-900 truncate w-32" title={file.name}>
+                                    {file.name}
                                   </div>
+                                  {file.progress < 100 && (
+                                    <div className="w-24 h-1 bg-gray-200 rounded-full mt-1">
+                                      <div 
+                                        className="h-full bg-blue-500 rounded-full transition-all duration-300" 
+                                        style={{ width: `${file.progress}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="pl-2 pr-1 py-2 whitespace-nowrap relative overflow-visible">
+                              {file.fileType === 'PDF' || file.fileType === 'Document' ? (
+                                <div className="category-dropdown relative overflow-visible">
+                                  <button
+                                    onClick={(e) => toggleCategoryDropdown(file.id, e)}
+                                    className="inline-flex items-center px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors"
+                                    title="Change Category"
+                                  >
+                                    {file.category}
+                                    <ChevronDown size={12} className="ml-1" />
+                                  </button>
+                                  
+                                  {/* Category Dropdown Menu - Vertical */}
+                                  {categoryDropdowns[file.id]?.open && (
+                                    <div className="fixed z-[99999] bg-white border border-gray-300 rounded-lg shadow-2xl py-1 w-36"
+                                         style={{
+                                           top: `${categoryDropdowns[file.id].position.top}px`,
+                                           left: `${categoryDropdowns[file.id].position.left}px`
+                                         }}>
+                                      {categories.map((category) => (
+                                        <button
+                                          key={category.id}
+                                          onClick={() => changeFileCategory(file.id, category.name)}
+                                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gray-100 block ${
+                                            file.category === category.name ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
+                                          }`}
+                                        >
+                                          {category.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="inline-flex px-2 py-1 text-xs font-medium rounded bg-gray-100 text-gray-800">
+                                  {file.category}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-xs font-medium text-gray-900">
+                              {file.size}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap">
+                              <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                {file.fileType.slice(0, 3)}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
+                              {file.dateUploaded}
+                            </td>
+                            <td className="px-3 py-2 whitespace-nowrap text-xs font-medium relative overflow-visible">
+                              <div className="action-dropdown relative flex justify-end overflow-visible">
+                                <button
+                                  onClick={(e) => toggleActionDropdown(file.id, e)}
+                                  className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                    actionDropdowns[file.id]?.open 
+                                      ? 'bg-blue-100 text-blue-700' 
+                                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                  }`}
+                                  title="Actions"
+                                >
+                                  {actionDropdowns[file.id]?.open ? (
+                                    <ChevronDown size={14} className="transition-all duration-200 rotate-180" />
+                                  ) : (
+                                    <ChevronDown size={14} className="transition-all duration-200" />
+                                  )}
+                                </button>
+                                
+                                {/* Dropdown Menu - Positioned to stay within viewport */}
+                                {actionDropdowns[file.id]?.open && (
+                                  <>
+                                    {/* Full screen backdrop */}
+                                    <div 
+                                      className="fixed inset-0 bg-transparent z-[9998]" 
+                                      onClick={() => setActionDropdowns({})}
+                                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+                                    />
+                                    
+                                    <div 
+                                      className="fixed bg-white border-2 border-gray-300 rounded-lg py-1 flex space-x-0 min-w-max z-[9999]"
+                                      style={{ 
+                                        position: 'fixed',
+                                        top: actionDropdowns[file.id]?.position?.top + 'px' || '50px',
+                                        left: actionDropdowns[file.id]?.position?.left + 'px' || '50px',
+                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                                        transform: 'translateX(-50%)',
+                                        zIndex: 9999
+                                      }}
+                                    >
+                                      <button
+                                        onClick={() => {
+                                          handleViewFile(file);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200 first:rounded-l-lg"
+                                        title="View"
+                                      >
+                                        <Eye size={18} className="text-gray-600 group-hover:text-blue-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          handleDownloadFile(file);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200"
+                                        title="Download"
+                                      >
+                                        <Download size={18} className="text-gray-600 group-hover:text-blue-600" />
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          removeFile(file.id);
+                                          setActionDropdowns({});
+                                        }}
+                                        className="p-3 hover:bg-red-50 transition-colors group last:rounded-r-lg"
+                                        title="Delete"
+                                      >
+                                        <X size={18} className="text-gray-600 group-hover:text-red-600" />
+                                      </button>
+                                    </div>
+                                  </>
                                 )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-1 py-1 whitespace-nowrap">
-                            <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded bg-gray-100 text-gray-800">
-                              {file.category.slice(0, 3)}
-                            </span>
-                          </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs text-gray-900">
-                            {file.size}
-                          </td>
-                          <td className="px-1 py-1 whitespace-nowrap">
-                            <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded bg-blue-100 text-blue-800">
-                              {file.fileType.slice(0, 3)}
-                            </span>
-                          </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs text-gray-900">
-                            {file.dateUploaded.slice(5)}
-                          </td>
-                          <td className="px-1 py-1 whitespace-nowrap text-xs font-medium relative">
-                            <div className="action-dropdown">
-                              <button
-                                onClick={() => toggleActionDropdown(file.id)}
-                                className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                                title="Actions"
-                              >
-                                <ChevronDown size={12} />
-                              </button>
-                              
-                              {/* Dropdown Menu */}
-                              {actionDropdowns[file.id] && (
-                                <div className="absolute right-0 top-8 z-50 bg-white border border-gray-300 rounded-lg shadow-xl py-1 w-20">
-                                  <button
-                                    onClick={() => {
-                                      handleViewFile(file);
-                                      setActionDropdowns({});
-                                    }}
-                                    className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 flex items-center"
-                                  >
-                                    <Eye size={10} className="mr-1" />
-                                    View
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      removeFile(file.id);
-                                      setActionDropdowns({});
-                                    }}
-                                    className="w-full text-left px-2 py-1 text-xs hover:bg-gray-100 flex items-center text-red-600"
-                                  >
-                                    <Trash2 size={10} className="mr-1" />
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
+                            </td>
+                          </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                <div className="text-center">
-                  <FileText size={48} className="mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No Documents Found</h3>
-                  <p className="text-gray-500">
+                </>
+              ) : (
+                <div className="p-6 text-center">
+                  <FileText size={40} className="mx-auto text-gray-400 mb-3" />
+                  <h3 className="text-base font-medium text-gray-900 mb-2">No Documents Found</h3>
+                  <p className="text-sm text-gray-500">
                     {getCurrentCategoryFiles().length === 0 
                       ? `No files uploaded for ${getCurrentCategoryName()}` 
                       : 'No files match your search/filter criteria'
@@ -758,8 +1098,8 @@ const DocumentHub = () => {
                     </button>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
             
             {/* Selection Summary */}
             {selectedFiles.length > 0 && (
@@ -788,6 +1128,8 @@ const DocumentHub = () => {
             </div>
           </div>
         </div>
+        
+        </div> {/* End Main Content Container */}
       </div>
     </div>
   );

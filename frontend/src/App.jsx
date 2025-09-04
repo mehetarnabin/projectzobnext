@@ -10,6 +10,12 @@ import EmployerRegisterPage from "./pages/EmployerRegisterPage";
 import PostJobPage from "./pages/PostJobPage";
 import JobseekerProfile from "./pages/JobseekerProfile";
 import EmployerDashboard from "./pages/EmployerDashboard";
+//event
+
+import EventCard from "./components/EmployerDashboard/EventCard.jsx";
+import EventPage from "./pages/EventPage.jsx";
+
+
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
 import StaffingDashboard from "./pages/StaffingDashboard";
 import EditProfileHeaderPage from "./pages/EditProfileHeaderPage";
@@ -36,6 +42,7 @@ import EmployerProfilePage from "./pages/EmployerProfilePage.jsx";
 import EditEmployerProfileHeaderPage from "./pages/EditEmployerProfileHeaderPage.jsx";
 import EditEmployerUserProfilePage from "./pages/EditEmployerUserProfilePage.jsx";
 import { EmployerProfileProvider } from "./context/EmployerProfileContext.jsx"; // New context
+
 
 const App = () => {
   return (
@@ -75,6 +82,12 @@ const App = () => {
                 <Route path="/employer/applicants/:applicationId" element={<ApplicantDetailsPage />} />
                 <Route path="/employer/jobs/:jobId/applicants" element={<JobApplicantsListPage />} />
                 <Route path="/employer/applicants/:applicationId/schedule-interview" element={<ScheduleInterviewPage />} />
+                {/* event  */}
+                
+                <Route path="employer/EventCard" element={<EventCard />}/>
+              
+                <Route path="/employer/eventpage" element={<EventPage />} />
+
 
                 {/* NEW EMPLOYER PROFILE ROUTES */}
                 <Route path="/employer/profile" element={<EmployerProfilePage />} />

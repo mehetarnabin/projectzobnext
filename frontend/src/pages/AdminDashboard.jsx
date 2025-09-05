@@ -1,28 +1,39 @@
 // src/pages/admin/AdminDashboard.jsx
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import AdminSidebar from "../components/AdminDashboard/AdminSidebar";
+import AdminHeader from "../components/AdminDashboard/AdminHeader";
+import AdminStatistics from "../components/AdminDashboard/AdminStatistics";
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem("admin_token"); // remove token on logout
-    navigate("/admin/login"); // redirect to admin login
-  };
-
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
-      <div className="bg-white rounded-2xl shadow-2xl p-10 max-w-2xl w-full text-center">
-        <h1 className="text-4xl font-bold text-gray-800 mb-4">Welcome to Admin Dashboard</h1>
-        <p className="text-gray-600 mb-6">
-          You are now logged in as an admin. Manage the system from here.
-        </p>
-        <button
-          onClick={handleLogout}
-          className="bg-red-600 text-white rounded-xl py-3 px-6 hover:bg-red-700 transition-all text-lg font-bold"
-        >
-          Logout
-        </button>
+    <div className="min-h-screen flex bg-gray-100">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-100">
+        <AdminSidebar />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <AdminHeader />
+
+        {/* Dashboard Content */}
+        <main className="p-6 space-y-6">
+          {/* Welcome message */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+              Welcome to Admin Dashboard
+            </h1>
+            <p className="text-gray-600">
+              You are now logged in as an admin. Manage the system from here.
+            </p>
+          </div>
+
+          {/* Statistics Graph */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <AdminStatistics />
+          </div>
+        </main>
       </div>
     </div>
   );

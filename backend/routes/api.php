@@ -11,16 +11,18 @@ use App\Http\Controllers\JobController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\Company;
 use App\Models\User;
 
-// Public Auth
+// ==================== Public Auth Routes ====================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Company search for autocomplete
+// ==================== Public Company Search ====================
 Route::get('/companies/search', function (Request $request) {
     $query = $request->input('query');
     if (!$query) return response()->json([]);
@@ -31,7 +33,7 @@ Route::get('/companies/search', function (Request $request) {
     return response()->json($companies);
 });
 
-// Test DB connection
+// ==================== Test DB Connection ====================
 Route::get('/test-db-connection', function () {
     try {
         DB::connection()->getPdo();
@@ -69,7 +71,7 @@ Route::get('/test-db-connection', function () {
     }
 });
 
-// Public routes
+// ==================== Public Routes ====================
 Route::get('/users', [UserController::class, 'index']);
 Route::post('/contact', [ContactController::class, 'store']);
 Route::get('/jobs', [JobController::class, 'index']);
@@ -82,7 +84,7 @@ Route::get('/jobs/{jobId}', function ($jobId) {
 // Public events
 Route::get('/events', [EventController::class, 'index']);
 
-// Protected routes
+// ==================== Protected User Routes ====================
 Route::middleware('auth:api')->group(function () {
 
     // Auth
@@ -90,7 +92,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
-    // Profile
+    // Profile Routes
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::post('/header', [ProfileController::class, 'updateHeader']);
@@ -125,51 +127,42 @@ Route::middleware('auth:api')->group(function () {
         });
     });
 
-    // Jobs
+    // Job Routes
     Route::post('/jobs', [JobController::class, 'store']);
     Route::put('/jobs/{job}', [JobController::class, 'update']);
     Route::delete('/jobs/{job}', [JobController::class, 'destroy']);
 
-    // Job Applications (Jobseeker)
+    // Job Applications
     Route::prefix('applications')->group(function () {
         Route::post('/{jobId}/apply', function ($jobId) {
             $job = Job::find($jobId);
             if (!$job) return response()->json(['error' => 'Job not found.'], 404);
             return (new JobApplicationController())->startApplication($job);
         });
-
         Route::post('/{applicationId}/next-step', function ($applicationId, Request $request) {
             return (new JobApplicationController())->nextStep($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::post('/{applicationId}/back-step', function ($applicationId, Request $request) {
             return (new JobApplicationController())->backStep($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::get('/{applicationId}/experience', function ($applicationId, Request $request) {
             return (new JobApplicationController())->getExperience($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::post('/{applicationId}/experience', function ($applicationId, Request $request) {
             return (new JobApplicationController())->saveExperience($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::get('/{applicationId}/education', function ($applicationId, Request $request) {
             return (new JobApplicationController())->getEducation($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::post('/{applicationId}/education', function ($applicationId, Request $request) {
             return (new JobApplicationController())->saveEducation($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::get('/{applicationId}/certifications', function ($applicationId, Request $request) {
             return (new JobApplicationController())->getCertifications($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::post('/{applicationId}/certifications', function ($applicationId, Request $request) {
             return (new JobApplicationController())->saveCertifications($request, JobApplication::findOrFail($applicationId));
         });
-
         Route::post('/{applicationId}/submit', function ($applicationId) {
             return (new JobApplicationController())->submitApplication(JobApplication::findOrFail($applicationId));
         });
@@ -177,7 +170,7 @@ Route::middleware('auth:api')->group(function () {
 
     Route::get('/user/applications', [JobApplicationController::class, 'getUserApplications']);
 
-    // Employer routes
+    // Employer Routes
     Route::prefix('employer')->group(function () {
         Route::get('jobs', [JobController::class, 'getEmployerJobs']);
         Route::post('jobs', [JobController::class, 'store']);
@@ -202,7 +195,7 @@ Route::middleware('auth:api')->group(function () {
         Route::get('/scheduled-interviews', [JobApplicationController::class, 'getScheduledInterviews']);
     });
 
-    // Events (protected)
+    // Protected Event Routes
     Route::prefix('events')->group(function () {
         Route::post('/', [EventController::class, 'store']);
         Route::get('/{id}', [EventController::class, 'show']);
@@ -212,7 +205,11 @@ Route::middleware('auth:api')->group(function () {
 
 });
 
+// ==================== Admin Routes ====================
+Route::prefix('admin')->group(function () {
+    // Public admin auth routes
+    Route::post('/register', [AdminController::class, 'register']);
+    Route::post('/login', [AdminController::class, 'login']);
 
-
-
-
+    
+});

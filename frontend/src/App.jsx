@@ -40,8 +40,12 @@ import EditEmployerProfileHeaderPage from "./pages/EditEmployerProfileHeaderPage
 import EditEmployerUserProfilePage from "./pages/EditEmployerUserProfilePage.jsx";
 import { EmployerProfileProvider } from "./context/EmployerProfileContext.jsx";
 // Admin
+import AdminRegister from "./pages/AdminRegister";
 import AdminLogin from "./pages/AdminLogin.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
+// Add this import at the top with other pages
+import EmployerSubscriptionPage from "./pages/EmployerSubscriptionPage.jsx";
+
 
 const App = () => {
   return (
@@ -90,8 +94,10 @@ const App = () => {
               </Route>
 
               {/* ---------- ADMIN ROUTES (NO LAYOUT / NO HEADER-FOOTER) ---------- */}
+              <Route path="/admin/register" element={<AdminRegister />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/employer-subscriptions" element={<EmployerSubscriptionPage />} />
             </Routes>
 
             <ToastContainer position="bottom-right" autoClose={3000} />

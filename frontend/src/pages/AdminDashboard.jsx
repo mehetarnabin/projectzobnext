@@ -2,7 +2,7 @@
 import React from "react";
 import AdminSidebar from "../components/AdminDashboard/AdminSidebar";
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
-import AdminStatistics from "../components/AdminDashboard/AdminStatistics";
+
 
 const AdminDashboard = () => {
   return (
@@ -29,10 +29,8 @@ const AdminDashboard = () => {
             </p>
           </div>
 
-          {/* Statistics Graph */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <AdminStatistics />
-          </div>
+          
+          
         </main>
       </div>
     </div>

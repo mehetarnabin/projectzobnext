@@ -12,7 +12,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\AdminController;
-use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\SubscriptionPlanController;
 use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\Company;
@@ -205,11 +205,23 @@ Route::middleware('auth:api')->group(function () {
 
 });
 
-// ==================== Admin Routes ====================
-Route::prefix('admin')->group(function () {
-    // Public admin auth routes
+    // ==================== Admin Routes ====================
+   Route::prefix('admin')->group(function () {
     Route::post('/register', [AdminController::class, 'register']);
     Route::post('/login', [AdminController::class, 'login']);
 
-    
+    Route::middleware('auth:admin')->group(function () {
+        Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+        Route::post('/subscription-plans', [SubscriptionPlanController::class, 'store']);
+        Route::put('/subscription-plans/{id}', [SubscriptionPlanController::class, 'update']);
+        Route::delete('/subscription-plans/{id}', [SubscriptionPlanController::class, 'destroy']);
+    });
 });
+
+
+
+
+        
+
+
+    

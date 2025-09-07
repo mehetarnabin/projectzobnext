@@ -1,4 +1,10 @@
-// EventCard.jsx
+
+
+
+  // Use backend-provided URL directly or fallback to placeholder
+  
+
+  // EventCard.jsx
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +18,8 @@ const EventCard = ({ event, onEdit, onDelete, onShare }) => {
         day: "numeric",
       })
     : "TBA";
+
+    const imageSrc = event.imageUrl || "https://via.placeholder.com/400x200?text=No+Image";
 
   return (
     <Card className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow rounded-2xl border border-gray-200">

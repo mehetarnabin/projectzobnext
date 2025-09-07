@@ -14,6 +14,7 @@ return new class extends Migration
     Schema::create('events', function (Blueprint $table) {
         $table->id();
         $table->string('title');
+        
         $table->text('description')->nullable();
 
         // Store full start & end timestamps
@@ -26,11 +27,11 @@ return new class extends Migration
         // Status: upcoming, ongoing, completed
         $table->enum('category', ['upcoming', 'ongoing', 'completed'])->default('upcoming');
 
-        
-
         // Media & tags
         $table->string('image_url')->nullable();
-        $table->json('tags')->nullable();
+        ;
+
+        
 
         $table->timestamps();
     });

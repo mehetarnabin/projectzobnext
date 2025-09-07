@@ -83,6 +83,8 @@ Route::get('/jobs/{jobId}', function ($jobId) {
 
 // Public events
 Route::get('/events', [EventController::class, 'index']);
+Route::get('/events/{slug}', [EventController::class, 'showBySlug']); // show by slug
+
 
 // ==================== Protected User Routes ====================
 Route::middleware('auth:api')->group(function () {
@@ -196,12 +198,17 @@ Route::middleware('auth:api')->group(function () {
     });
 
     // Protected Event Routes
-    Route::prefix('events')->group(function () {
-        Route::post('/', [EventController::class, 'store']);
-        Route::get('/{id}', [EventController::class, 'show']);
-        Route::put('/{id}', [EventController::class, 'update']);
-        Route::delete('/{id}', [EventController::class, 'destroy']);
+    Route::middleware('auth:api')->group(function () {
+        Route::prefix('events')->group(function () {
+            Route::post('/', [EventController::class, 'store']);
+            Route::get('/{id}', [EventController::class, 'show']);
+            // routes/api.php
+
+            Route::put('/{id}', [EventController::class, 'update']);
+            Route::delete('/{id}', [EventController::class, 'destroy']);
+        });
     });
+
 
 });
 

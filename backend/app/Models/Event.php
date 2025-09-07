@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Event extends Model
 {
@@ -15,10 +16,8 @@ class Event extends Model
         'organizer',
         'category',
         'image_url',
-        'tags',
+        
     ];
 
-    protected $casts = [
-        'tags' => 'array',
-    ];
+   
 }

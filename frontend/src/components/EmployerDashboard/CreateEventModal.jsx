@@ -197,33 +197,8 @@ export function CreateEventModal({ isOpen, onClose, onSave, editEvent }) {
             )}
 
 
-            <Label htmlFor="tags" className="mt-4">Tags</Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                id="tags"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Add a tag and press Enter"
-                className="flex-1 border-gray-200 rounded-4xl p-2"
-              />
-              <Button type="button" onClick={addTag} size="sm">
-                Add
-              </Button>
-            </div>
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="flex items-center gap-1">
-                    {tag}
-                    <X
-                      className="h-3 w-3 cursor-pointer hover:text-destructive"
-                      onClick={() => removeTag(tag)}
-                    />
-                  </Badge>
-                ))}
-              </div>
-            )}
+            
+            
           </div>
 
           {/* Buttons */}

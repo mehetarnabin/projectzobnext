@@ -25,7 +25,7 @@ class EventController extends Controller
         'organizer'     => $event->organizer,
         'category'      => $event->category,
         'imageUrl'    => $event->image_url ? asset('storage/' . $event->image_url) : null,
-        'tags'          => $event->tags,
+        
     ];
 }
 
@@ -56,7 +56,7 @@ public function show($id)
             'organizer'   => 'nullable|string|max:255',
             'category'    => ['required', Rule::in(['upcoming', 'ongoing', 'completed'])],
             'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'tags'        => 'nullable|array',
+            
         ]);
 
         $imagePath = null;
@@ -75,7 +75,7 @@ public function show($id)
             'organizer'   => $validated['organizer'] ?? null,
             'category'    => $validated['category'],
             'image_url'   => $imagePath,
-            'tags'        => $validated['tags'] ?? [],
+            
         ]);
 
         return response()->json($this->transform($event), 201);
@@ -96,7 +96,7 @@ public function show($id)
             'organizer'   => 'nullable|string|max:255',
             'category'    => ['nullable', Rule::in(['upcoming', 'ongoing', 'completed'])],
             'image'       => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'tags'        => 'nullable|array',
+            
         ]);
 
         $imagePath = $event->image_url;
@@ -120,7 +120,7 @@ public function show($id)
             'organizer'   => $validated['organizer'] ?? $event->organizer,
             'category'    => $validated['category'] ?? $event->category,
             'image_url'   => $imagePath,
-            'tags'        => $validated['tags'] ?? $event->tags,
+            
         ]);
 
         return response()->json($this->transform($event));

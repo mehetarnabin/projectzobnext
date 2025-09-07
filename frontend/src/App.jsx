@@ -86,7 +86,7 @@ const App = () => {
                 <Route path="/employer/EventCard" element={<EventCard />} />
                 <Route path="/employer/eventpage" element={<EventPage />} />
                 <Route path="/employer/event/:id" element={<EventDetailsPage />} />
-                <Route path="/event/:id" element={<EventDetailsPage />} />
+                <Route path="/events/:slug" element={<EventDetailsPage />} />
                 {/* Employer Profile */}
                 <Route path="/employer/profile" element={<EmployerProfilePage />} />
                 <Route path="/employer/profile/edit-company-header" element={<EditEmployerProfileHeaderPage />} />

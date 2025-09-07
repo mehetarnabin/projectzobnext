@@ -18,11 +18,11 @@ import { SlEvent } from "react-icons/sl";
 const NavigationMenu = () => {
   const menuItems = [
     { name: "Post a Job", icon: <IoBriefcaseOutline />, path: "/postjob" },
-    { name: "Posted Jobs", icon: <IoBriefcaseOutline />, path: "/employer/posted-jobs" },
+    //{ name: "Posted Jobs", icon: <IoBriefcaseOutline />, path: "/employer/posted-jobs" },
     { name: "Applicants", icon: <BsCardChecklist />, path: "/employer/applicants" },
-    { name: "Job Insight", icon: <AiOutlineBarChart /> },
+    //{ name: "Job Insight", icon: <AiOutlineBarChart /> },
     { name: "Resources", icon: <LuNotebookText /> },
-    { name: "Resume Builder", icon: <FaRegFileLines /> },
+    //{ name: "Resume Builder", icon: <FaRegFileLines /> },
     { name: "Companies", icon: <BsBuildings /> },
     { name: "Events", icon: <SlEvent />, path:"/employer/eventpage"}
   ];

@@ -1,16 +1,15 @@
 import React from "react";
-import Sidebar from "../components/EmployerDashboard/Sidebar"; // Assuming this is correct
-// import Header from "../components/Dashboard/Header"; // Keeping commented out as in your example
-import ProfileActivity from "../components/EmployerDashboard/ProfileActivity"; // This is now your applicant counts
-// import ActivityStatistics from "../components/EmployerDashboard/VacancyStats";
+import Sidebar from "../components/EmployerDashboard/Sidebar"; 
+import ProfileActivity from "../components/EmployerDashboard/ProfileActivity"; 
 import { useAuth } from "../context/AuthContext";
 import VacancyStats from "../components/EmployerDashboard/VacancyStats";
 
-// NEW IMPORTS FOR EMPLOYER DASHBOARD
+// NEW IMPORTS
 import UpcomingEvents from "../components/EmployerDashboard/UpcomingEvents";
 import LatestActivity from "../components/EmployerDashboard/LatestActivity";
+import RecruitmentStats from "../components/EmployerDashboard/RecruitmentStats"; // <-- Import added
 
-const DashboardPage = () => { // Renamed from EmployerDashboard for consistency with App.jsx
+const DashboardPage = () => {
   const { user } = useAuth();
 
   if (!user) {
@@ -28,18 +27,15 @@ const DashboardPage = () => { // Renamed from EmployerDashboard for consistency 
         
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header (if you uncomment it later) */}
-          {/* <Header /> */}
-
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 pr-0">
             {/* Employer-specific Dashboard Content */}
             {isEmployer ? (
               <>
-                {/* Applicant Overview Cards (ProfileActivity) */}
+                {/* Applicant Overview Cards */}
                 <ProfileActivity />
 
-                {/* Activity Statistics Chart */}
+                {/* Vacancy Stats + Events */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                   <div className="lg:col-span-2">
                     <VacancyStats />
@@ -49,17 +45,19 @@ const DashboardPage = () => { // Renamed from EmployerDashboard for consistency 
                   </div>
                 </div>
 
-                {/* New Row: Upcoming Events and Latest Activity */}
+                {/* Recruitment Stats + Latest Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <LatestActivity />
+                  <div>
+                    <RecruitmentStats />   {/* Left side */}
+                  </div>
+                  <div>
+                    <LatestActivity />     {/* Right side */}
+                  </div>
                 </div>
               </>
             ) : (
-              // Content for Job Seeker Dashboard (if this DashboardPage is shared)
-              // Or a message if this page is strictly for employers
               <div className="text-center py-8 text-gray-600">
                 Welcome to your Dashboard! Content tailored for your role will appear here.
-                {/* You might put job seeker specific components here if this is a universal dashboard */}
               </div>
             )}
           </main> 

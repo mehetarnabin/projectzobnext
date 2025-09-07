@@ -146,14 +146,7 @@ const EventPage = () => {
             </Select>
 
             {/* Updated Second Button with Plus icon */}
-            <Button
-              onClick={() => setIsCreateModalOpen(true)}
-              variant="outline"
-              className="border-2 border-[#003893] text-[#003893] hover:bg-transparent hover:border-[#003893] hover:text-[#003893]"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Event
-            </Button>
+            
           </div>
         </div>
 

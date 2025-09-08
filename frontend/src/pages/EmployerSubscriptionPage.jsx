@@ -5,7 +5,7 @@ import SubscriptionModal from "../components/AdminDashboard/SubscriptionModal";
 import SubscriptionGrid from "../components/AdminDashboard/SubscriptionGrid";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import api from "../api/axios"; // Axios instance with JWT
+import api from "../api/AdminApi"; // Axios instance with JWT
 
 const EmployerSubscriptionPage = () => {
   const [plans, setPlans] = useState([]);
@@ -18,7 +18,7 @@ const EmployerSubscriptionPage = () => {
 
   const fetchPlans = async () => {
     try {
-      const res = await api.get("/admin/subscription-plans");
+      const res = await api.get("/subscription-plans");
       setPlans(res.data.data || []); // fallback to empty array
     } catch (err) {
       console.error(err.response?.data || err);

@@ -86,6 +86,9 @@ Route::get('/events', [EventController::class, 'index']);
 Route::get('/events/{slug}', [EventController::class, 'showBySlug']); // show by slug
 
 
+//Public subscription
+Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+
 // ==================== Protected User Routes ====================
 Route::middleware('auth:api')->group(function () {
 
@@ -218,7 +221,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/login', [AdminController::class, 'login']);
 
     Route::middleware('auth:admin')->group(function () {
-        Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+       
         Route::post('/subscription-plans', [SubscriptionPlanController::class, 'store']);
         Route::put('/subscription-plans/{id}', [SubscriptionPlanController::class, 'update']);
         Route::delete('/subscription-plans/{id}', [SubscriptionPlanController::class, 'destroy']);

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
-import api from "../api/axios";
+import api from "../api/AdminApi";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -13,9 +13,17 @@ const AdminLogin = () => {
     e.preventDefault();
     try {
       const res = await api.post("/admin/login", { email, password });
-      const token = res.data.access_token; // ✅ fixed
+      console.log("Login response:", res.data);
+
+      // ✅ Get token from nested "data"
+      const token = res.data.data?.access_token;
+      if (!token) {
+        throw new Error("No token returned from server. Check backend response.");
+      }
+
+      // ✅ Save token in localStorage
       localStorage.setItem("admin_token", token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
       alert("Login successful!");
       navigate("/admin/dashboard");
     } catch (err) {
@@ -23,6 +31,7 @@ const AdminLogin = () => {
       alert(err.response?.data?.message || "Login failed");
     }
   };
+
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4">

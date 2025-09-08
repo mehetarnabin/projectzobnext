@@ -878,7 +878,8 @@ const DocumentHub = () => {
                   </div>
                   
                   {/* Table */}
-                  <div className="w-full relative overflow-visible" style={{ isolation: 'isolate', overflow: 'visible' }}>
+                  <div className="max-h-[1400px] overflow-y-auto relative" style={{ isolation: 'isolate' }}>
+
                     <table className="w-full text-xs table-fixed">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
@@ -999,80 +1000,64 @@ const DocumentHub = () => {
                             <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-600">
                               {file.dateUploaded}
                             </td>
-                            <td className="px-3 py-2 whitespace-nowrap text-xs font-medium relative overflow-visible">
-                              <div className="action-dropdown relative flex justify-end overflow-visible">
+                            <td className="px-3 py-2 whitespace-nowrap text-xs font-medium relative">
+                              <div className="relative flex justify-end">
+                                {/* Action Button */}
                                 <button
                                   onClick={(e) => toggleActionDropdown(file.id, e)}
-                                  className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                    actionDropdowns[file.id]?.open 
-                                      ? 'bg-blue-100 text-blue-700' 
+                                  className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                    actionDropdowns[file.id]?.open
+                                      ? 'bg-blue-100 text-blue-700'
                                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                   }`}
                                   title="Actions"
                                 >
-                                  {actionDropdowns[file.id]?.open ? (
-                                    <ChevronDown size={14} className="transition-all duration-200 rotate-180" />
-                                  ) : (
-                                    <ChevronDown size={14} className="transition-all duration-200" />
-                                  )}
+                                  <ChevronDown
+                                    size={14}
+                                    className={`transition-transform duration-200 ${
+                                      actionDropdowns[file.id]?.open ? 'rotate-180' : ''
+                                    }`}
+                                  />
                                 </button>
-                                
-                                {/* Dropdown Menu - Positioned to stay within viewport */}
+
+                                {/* Dropdown Menu shifted more left and further up */}
                                 {actionDropdowns[file.id]?.open && (
-                                  <>
-                                    {/* Full screen backdrop */}
-                                    <div 
-                                      className="fixed inset-0 bg-transparent z-[9998]" 
-                                      onClick={() => setActionDropdowns({})}
-                                      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-                                    />
-                                    
-                                    <div 
-                                      className="fixed bg-white border-2 border-gray-300 rounded-lg py-1 flex space-x-0 min-w-max z-[9999]"
-                                      style={{ 
-                                        position: 'fixed',
-                                        top: actionDropdowns[file.id]?.position?.top + 'px' || '50px',
-                                        left: actionDropdowns[file.id]?.position?.left + 'px' || '50px',
-                                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-                                        transform: 'translateX(-50%)',
-                                        zIndex: 9999
+                                  <div className="absolute top-full right-0 mt-1 -translate-x-2 -translate-y-8 bg-white border border-gray-300 rounded shadow z-50 flex">
+                                    <button
+                                      onClick={() => {
+                                        handleViewFile(file);
+                                        setActionDropdowns({});
                                       }}
+                                      className="px-2 py-1 hover:bg-blue-50 transition-colors border-r border-gray-200 first:rounded-l-sm"
+                                      title="View"
                                     >
-                                      <button
-                                        onClick={() => {
-                                          handleViewFile(file);
-                                          setActionDropdowns({});
-                                        }}
-                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200 first:rounded-l-lg"
-                                        title="View"
-                                      >
-                                        <Eye size={18} className="text-gray-600 group-hover:text-blue-600" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          handleDownloadFile(file);
-                                          setActionDropdowns({});
-                                        }}
-                                        className="p-3 hover:bg-blue-50 transition-colors group border-r border-gray-200"
-                                        title="Download"
-                                      >
-                                        <Download size={18} className="text-gray-600 group-hover:text-blue-600" />
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          removeFile(file.id);
-                                          setActionDropdowns({});
-                                        }}
-                                        className="p-3 hover:bg-red-50 transition-colors group last:rounded-r-lg"
-                                        title="Delete"
-                                      >
-                                        <X size={18} className="text-gray-600 group-hover:text-red-600" />
-                                      </button>
-                                    </div>
-                                  </>
+                                      <Eye size={16} className="text-gray-600 hover:text-blue-600" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        handleDownloadFile(file);
+                                        setActionDropdowns({});
+                                      }}
+                                      className="px-2 py-1 hover:bg-blue-50 transition-colors border-r border-gray-200"
+                                      title="Download"
+                                    >
+                                      <Download size={16} className="text-gray-600 hover:text-blue-600" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        removeFile(file.id);
+                                        setActionDropdowns({});
+                                      }}
+                                      className="px-2 py-1 hover:bg-red-50 transition-colors last:rounded-r-sm"
+                                      title="Delete"
+                                    >
+                                      <X size={16} className="text-gray-600 hover:text-red-600" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
                             </td>
+
                           </tr>
                       ))}
                     </tbody>

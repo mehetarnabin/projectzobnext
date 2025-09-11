@@ -1,6 +1,3 @@
-
-
-
   // Use backend-provided URL directly or fallback to placeholder
   
 

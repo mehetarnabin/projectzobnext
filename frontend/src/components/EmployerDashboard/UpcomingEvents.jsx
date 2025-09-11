@@ -1,168 +1,120 @@
-import API_BASE_URL from "../../config";
-import React, { useState, useEffect, useCallback } from 'react';
-import { CalendarDays, ChevronRight, Clock, Video, Phone, MapPin, Edit, Trash2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { useAuth } from '../../context/AuthContext';
-import { toast } from 'react-toastify';
+import React, { useEffect, useState, useCallback } from "react";
+import { parseISO, format } from "date-fns";
+import { Clock, Edit, Trash2 } from "lucide-react";
+import { fetchEvents, deleteEvent } from "../../api/event"; // adjust path if needed
+import { toast } from "react-toastify";
 
-// Dummy events for demo
-const demoEvents = [
-  {
-    id: 101,
-    interviewDate: "2025-09-05",
-    interviewTime: "11:00",
-    interviewType: "online",
-    interviewLink: "https://zoom.us/demo-link",
-    applicantName: "Demo User 1",
-    jobTitle: "Demo Developer"
-  },
-  {
-    id: 102,
-    interviewDate: "2025-09-06",
-    interviewTime: "15:00",
-    interviewType: "in-person",
-    interviewLink: "Demo Office, Kathmandu",
-    applicantName: "Demo User 2",
-    jobTitle: "Demo Designer"
-  },
-];
+const UpcomingEvents = ({ category = "upcoming" }) => {
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [errorEvents, setErrorEvents] = useState(null);
 
-const UpcomingEvents = () => {
-    const { token, user } = useAuth();
-    const [currentDate, setCurrentDate] = useState('');
-    const [scheduledInterviews, setScheduledInterviews] = useState(demoEvents); // start with demo events
-    const [loadingEvents, setLoadingEvents] = useState(true);
-    const [errorEvents, setErrorEvents] = useState(null);
+  const getEventDateTime = (ev) => {
+    if (!ev?.date) return null;
+    const timePart = ev.time && ev.time.trim() ? ev.time : "00:00";
+    const dateTimeString = `${ev.date}T${timePart}:00`;
+    const parsed = parseISO(dateTimeString);
+    return isNaN(parsed) ? null : parsed;
+  };
 
-    useEffect(() => {
-        setCurrentDate(format(new Date(), 'EEEE, MMMM do, yyyy'));
-    }, []);
+  const fetchEventsByCategory = useCallback(async () => {
+    setLoadingEvents(true);
+    setErrorEvents(null);
 
-    const fetchScheduledInterviews = useCallback(async () => {
-        if (!token || !user || user.role !== 'employer') {
-            setLoadingEvents(false);
-            setErrorEvents('Unauthorized or not an employer.');
-            return;
-        }
+    try {
+      const data = await fetchEvents();
+      console.log("📌 Raw events from API:", data);
 
-        setLoadingEvents(true);
-        setErrorEvents(null);
-        try {
-            const response = await fetch(`${API_BASE_URL}/employer/scheduled-interviews`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+      // Filter by category
+      const filtered = data.filter((ev) => ev.category === category);
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
+      // Sort by datetime
+      filtered.sort((a, b) => {
+        const aDate = getEventDateTime(a);
+        const bDate = getEventDateTime(b);
+        return aDate - bDate;
+      });
 
-            const data = await response.json();
-            const filteredInterviews = data.interviews.filter(interview => {
-                const interviewDateTime = parseISO(`${interview.interviewDate}T${interview.interviewTime}`);
-                return interviewDateTime >= new Date();
-            });
+      setEvents(filtered);
+    } catch (err) {
+      console.error("Error fetching events:", err);
+      setErrorEvents("Failed to load events.");
+      toast.error("Failed to load events.");
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [category]);
 
-            filteredInterviews.sort((a, b) => {
-                const dateA = parseISO(`${a.interviewDate}T${a.interviewTime}`);
-                const dateB = parseISO(`${b.interviewDate}T${b.interviewTime}`);
-                return dateA.getTime() - dateB.getTime();
-            });
+  useEffect(() => {
+    fetchEventsByCategory();
+  }, [fetchEventsByCategory]);
 
-            setScheduledInterviews(filteredInterviews.length ? filteredInterviews : demoEvents); // fallback to demo
-        } catch (err) {
-            console.error("Error fetching scheduled interviews:", err);
-            setErrorEvents(err.message || "Failed to load scheduled interviews.");
-            toast.error("Failed to load scheduled interviews: " + (err.message || "Network error."));
-        } finally {
-            setLoadingEvents(false);
-        }
-    }, [token, user]);
+  const handleEdit = (id) => toast.info(`Edit event ${id}`);
 
-    useEffect(() => {
-        fetchScheduledInterviews();
-        const interval = setInterval(fetchScheduledInterviews, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, [fetchScheduledInterviews]);
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
 
-    const handleEdit = (id) => {
-        console.log("Edit event", id);
-        toast.info(`Edit event ${id} clicked`);
-    };
+    try {
+      await deleteEvent(id);
+      // Remove the deleted event from state
+      setEvents(prev => prev.filter(event => event.id !== id));
+      toast.success("Event deleted successfully");
+    } catch (err) {
+      console.error("Failed to delete event", err);
+      toast.error("Failed to delete event");
+    }
+  };
 
-    const handleDelete = (id) => {
-        if (window.confirm("Are you sure you want to delete this event?")) {
-            setScheduledInterviews(scheduledInterviews.filter(ev => ev.id !== id));
-            toast.success("Event deleted successfully");
-        }
-    };
+  return (
+    <div className="bg-white shadow rounded-lg p-4">
+      <h2 className="text-lg font-semibold mb-3">
+        {category.charAt(0).toUpperCase() + category.slice(1)} Events
+      </h2>
 
-    const renderEventDetails = (interview) => {
-        let icon;
-        switch (interview.interviewType) {
-            case 'online': icon = <Video size={14} className="inline-block mr-1" />; break;
-            case 'in-person': icon = <MapPin size={14} className="inline-block mr-1" />; break;
-            case 'phone': icon = <Phone size={14} className="inline-block mr-1" />; break;
-            default: icon = null;
-        }
+      {loadingEvents && <p className="text-gray-500">Loading...</p>}
+      {errorEvents && <p className="text-red-500">{errorEvents}</p>}
 
-        return (
-            <p className="text-xs text-gray-500">
-                {icon} {interview.interviewLink}
-                {interview.interviewers && interview.interviewers.length > 0 && (
-                    <span className="ml-2"> | Interviewers: {interview.interviewers.join(', ')}</span>
-                )}
-            </p>
-        );
-    };
+      {!loadingEvents && events.length === 0 && (
+        <p className="text-gray-400">No {category} events.</p>
+      )}
 
-    return (
-        <div className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Upcoming Events</h3>
-                <button className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                    View All <ChevronRight size={16} />
+      <div className="space-y-2">
+        {events.map((event) => {
+          const start = getEventDateTime(event);
+          return (
+            <div
+              key={event.id}
+              className="border-l-4 border-blue-500 pl-3 py-2 bg-blue-50 rounded-r-md flex justify-between items-start"
+            >
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  <Clock size={14} className="inline-block mr-1" />
+                  {start ? format(start, "hh:mm a") : "Invalid Time"} – {event.title}
+                </p>
+                <p className="text-xs text-gray-500">{event.location || "No location specified"}</p>
+              </div>
+              <div className="flex space-x-2 mt-1">
+                <button
+                  onClick={() => handleEdit(event.id)}
+                  className="text-blue-500 hover:text-blue-700"
+                  title="Edit"
+                >
+                  <Edit size={16} />
                 </button>
+                <button
+                  onClick={() => handleDelete(event.id)}
+                  className="text-red-500 hover:text-red-700"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
-
-            <div className="flex items-center text-gray-600 text-sm mb-4">
-                <CalendarDays size={16} className="mr-2" />
-                <span>{currentDate}</span>
-            </div>
-
-            {loadingEvents ? (
-                <div className="text-center text-gray-500 py-4">Loading upcoming events...</div>
-            ) : errorEvents ? (
-                <div className="text-center text-red-500 py-4">Error: {errorEvents}</div>
-            ) : (
-                <div className="space-y-3 flex-grow overflow-y-auto">
-                    {scheduledInterviews.map(interview => (
-                        <div key={interview.id} className="border-l-4 border-blue-500 pl-3 py-2 bg-blue-50 rounded-r-md flex justify-between items-start">
-                            <div>
-                                <p className="text-sm font-medium text-gray-900">
-                                    <Clock size={14} className="inline-block mr-1" />
-                                    {format(parseISO(`${interview.interviewDate}T${interview.interviewTime}`), 'hh:mm a')} - Interview with {interview.applicantName} for {interview.jobTitle}
-                                </p>
-                                {renderEventDetails(interview)}
-                            </div>
-                            <div className="flex space-x-2 mt-1">
-                                <button onClick={() => handleEdit(interview.id)} className="text-blue-500 hover:text-blue-700" title="Edit">
-                                    <Edit size={16} />
-                                </button>
-                                <button onClick={() => handleDelete(interview.id)} className="text-red-500 hover:text-red-700" title="Delete">
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 export default UpcomingEvents;

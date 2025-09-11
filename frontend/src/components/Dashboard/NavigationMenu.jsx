@@ -1,17 +1,13 @@
 import React from "react";
 import { 
-  FaSave, 
   FaBriefcase, 
   FaFileAlt, 
-  FaBook, 
-  FaBuilding,
-  FaCalendarAlt
+  FaChartLine,
+  FaGem  // Premium icon
 } from "react-icons/fa";
 import { BsCardChecklist, BsBuildings } from "react-icons/bs";
 import { IoBriefcaseOutline } from "react-icons/io5";
-import { AiOutlineBarChart } from "react-icons/ai";
 import { LuNotebookText } from "react-icons/lu";
-import { FaRegFileLines } from "react-icons/fa6";
 import { SlEvent } from "react-icons/sl";
 import { useNavigate } from "react-router-dom";
 
@@ -23,9 +19,19 @@ const NavigationMenu = () => {
     { name: "Applied Jobs", icon: <BsCardChecklist />, path: "/jobseeker/dashboard/applied-jobs" },
     { name: "Shortlisted Candidate", icon: <FaBriefcase />, path: "/jobseeker/dashboard/shortlisted-candidate" },
     { name: "Document Hub", icon: <BsCardChecklist />, path: "/jobseeker/dashboard/document-hub" },
-    { name: "Job Insight", icon: <AiOutlineBarChart />, path: "/dashboard/job-insight" },
+    { 
+      name: "Job Insight", 
+      icon: <FaChartLine />, 
+      path: "/dashboard/job-insight", 
+      premium: true // mark as premium
+    },
     { name: "Resources", icon: <LuNotebookText />, path: "/dashboard/resources" },
-    { name: "Resume Builder", icon: <FaRegFileLines />, path: "/dashboard/resume-builder" },
+    { 
+      name: "Resume Builder", 
+      icon: <FaFileAlt />, 
+      path: "/dashboard/resume-builder", 
+      premium: true // mark as premium
+    },
     { name: "Companies", icon: <BsBuildings />, path: "/dashboard/companies" },
     { name: "Events", icon: <SlEvent />, path: "/dashboard/events" }
   ];
@@ -36,11 +42,16 @@ const NavigationMenu = () => {
         {menuItems.map((item, index) => (
           <li key={index}>
             <button 
-              className="w-full flex items-center p-2 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
+              className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
               onClick={() => navigate(item.path)}
             >
-              <span className="mr-3">{item.icon}</span>
-              <span>{item.name}</span>
+              <span className="flex items-center">
+                <span className="mr-3 text-gray-700 text-xl">{item.icon}</span>
+                <span className="text-gray-800">{item.name}</span>
+              </span>
+              {item.premium && (
+                <FaGem className="text-pink-500 text-xl" /> // Premium icon on right
+              )}
             </button>
           </li>
         ))}

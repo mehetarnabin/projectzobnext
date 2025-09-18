@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Job;
-use App\Models\Profile; // Assuming Profile model exists for employer profiles
+use App\Models\Profile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -17,14 +17,11 @@ class JobController extends Controller
     /**
      * Store a newly created job in storage.
      * Employer who is logged in will be the owner.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
-        // Your provided store method is good. Using it as is.
-        if (!Auth::user()->isEmployer()) {
+        $user = Auth::user();
+        if (!$user || !$user->isEmployer()) {
             return response()->json(['error' => 'Unauthorized: Only employers can post jobs.'], 403);
         }
 
@@ -39,71 +36,68 @@ class JobController extends Controller
                 'salary' => 'required|string|max:255',
                 'salary_type' => 'required|string|in:Annual,Hourly,Contract',
                 'company' => 'required|string|max:255',
-                'logo' => 'nullable|image|max:2048', // This is the uploaded file
-                'image' => 'nullable|image|max:2048', // This is the uploaded banner file
+                'logo' => 'nullable|image|max:2048',
+                'image' => 'nullable|image|max:2048',
                 'apply_before' => 'required|date',
                 'video_url' => 'nullable|url',
                 'key_points' => 'nullable|array',
-                'package' => 'required|string',
+                'package_id' => 'required|exists:subscription_plans,id',
             ]);
 
-            $jobLogoPath = null;
-            if ($request->hasFile('logo')) {
-                $jobLogoPath = $request->file('logo')->store('job-logos', 'public');
-            }
-
-            $jobImagePath = null; // For the job-specific banner image
-            if ($request->hasFile('image')) {
-                $jobImagePath = $request->file('image')->store('job-banners', 'public');
-            }
+            $jobLogo = $request->hasFile('logo') ? $request->file('logo')->store('job-logos', 'public') : null;
+            $jobBanner = $request->hasFile('image') ? $request->file('image')->store('job-banners', 'public') : null;
 
             $job = Job::create([
-                'employer_id' => Auth::id(),
-                'title' => $validated['title'],
-                'description' => $validated['description'],
-                'location' => $validated['location'],
-                'classification' => $validated['classification'],
-                'work_type' => $validated['work_type'],
-                'workplace' => $validated['workplace'],
-                'salary' => $validated['salary'],
-                'salary_type' => $validated['salary_type'],
-                'company' => $validated['company'],
-                'logo_path' => $jobLogoPath, // Storing job-specific logo path
-                'image' => $jobImagePath, // Storing job-specific banner path
-                'apply_before' => $validated['apply_before'],
-                'video_url' => $validated['video_url'] ?? null,
-                'key_points' => $validated['key_points'] ?? null,
-                'package' => $validated['package'],
-                'is_published' => true, // Assuming new jobs are published by default
+                'employer_id'   => $user->id,
+                'title'         => $validated['title'],
+                'description'   => $validated['description'],
+                'location'      => $validated['location'],
+                'classification'=> $validated['classification'],
+                'work_type'     => $validated['work_type'],
+                'workplace'     => $validated['workplace'],
+                'salary'        => $validated['salary'],
+                'salary_type'   => $validated['salary_type'],
+                'company'       => $validated['company'],
+                'logo_path'     => $jobLogo,
+                'image'         => $jobBanner,
+                'apply_before'  => $validated['apply_before'],
+                'video_url'     => $validated['video_url'] ?? null,
+                'key_points'    => $validated['key_points'] ?? null,
+                'package_id'    => $validated['package_id'],
+                'is_published'  => false,
             ]);
 
-            Log::info('Job posted successfully by employer.', ['job_id' => $job->id, 'employer_id' => Auth::id()]);
-
             return response()->json([
-                'message' => 'Job posted successfully',
-                'job' => $job
+                'message' => 'Draft job created successfully.',
+                'job_id' => $job->id,
+                'package_id' => $validated['package_id'],
             ], 201);
+
         } catch (ValidationException $e) {
-            Log::error('Job posting validation failed:', ['errors' => $e->errors()]);
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Error posting job: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['error' => 'An unexpected error occurred while posting the job.'], 500);
+            Log::error('Error creating job:', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return response()->json(['error' => 'Unexpected error occurred while creating the job.'], 500);
         }
     }
 
+
     /**
      * Display a listing of jobs (public view).
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function index(Request $request)
     {
-        $query = Job::where('is_published', true);
+        $query = Job::query()
+            ->where('is_published', true)
+            ->whereHas('transactions', function ($q) {
+                $q->where('status', 'succeeded');
+            });
 
-        // Filter by title/keywords/company
-        if ($request->has('title')) {
+        if ($request->filled('title')) {
             $keyword = $request->input('title');
             $query->where(function ($q) use ($keyword) {
                 $q->where('title', 'like', '%' . $keyword . '%')
@@ -112,87 +106,67 @@ class JobController extends Controller
             });
         }
 
-        // Filter by location
-        if ($request->has('location')) {
+        if ($request->filled('location')) {
             $location = $request->input('location');
             $query->where('location', 'like', '%' . $location . '%');
         }
 
-        // Filter by classification
-        if ($request->has('classification')) {
-            $classification = $request->input('classification');
-            $query->where('classification', $classification);
+        if ($request->filled('classification')) {
+            $query->where('classification', $request->input('classification'));
         }
 
-        $jobs = $query->with('employer.profile') // Eager load employer and their profile
-                      ->orderBy('created_at', 'desc')
-                      ->get()
-                      ->map(function ($job) {
-                           return $this->processJobForFrontend($job);
-                       });
+        $jobs = $query->with(['employer.profile', 'transactions'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($job) => $this->processJobForFrontend($job));
 
         return response()->json($jobs);
     }
 
     /**
-     * Display the specified job.
-     *
-     * @param  \App\Models\Job  $job
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
+     * Display a specific job.
      */
     public function show(Job $job, Request $request)
     {
-        // Your provided show method is good. Using it as is.
-        $job->load('employer.profile'); // Ensure employer and profile are loaded
+        $job->load('employer.profile');
 
         try {
-            $processedJob = $this->processJobForFrontend($job);
-            return response()->json($processedJob);
+            return response()->json($this->processJobForFrontend($job));
         } catch (\Throwable $th) {
             Log::error('Error processing job for frontend in show method:', [
                 'job_id' => $job->id ?? 'N/A',
                 'error_message' => $th->getMessage(),
                 'file' => $th->getFile(),
                 'line' => $th->getLine(),
-                'trace' => $th->getTraceAsString(),
             ]);
-            return response()->json(['error' => 'Failed to process job details.', 'debug_info' => $th->getMessage()], 500);
+            return response()->json(['error' => 'Failed to process job details.'], 500);
         }
     }
 
     /**
-     * Helper function to process job data for consistent frontend output.
-     * Adjusted to prioritize job-specific logo/image, then employer profile, then default.
-     *
-     * @param Job $job
-     * @return array
+     * Process job data for consistent frontend output.
      */
     private function processJobForFrontend($job)
     {
         $appUrl = Config::get('app.url');
-
         $employer = $job->employer;
-        $profile = $employer ? $employer->profile : null;
+        $profile  = $employer ? $employer->profile : null;
 
-        // Logic for company logo: job-specific logo > employer profile logo > default
         $companyLogo = $job->logo_path
             ? Storage::url($job->logo_path)
             : ($profile?->logo_url
                 ? Storage::url($profile->logo_url)
                 : $appUrl . '/images/default-company-logo.png');
 
-        // Logic for banner image: job-specific image > employer profile banner > default
-        $bannerImage = $job->image // This is the 'image' field from your Job model
+        $bannerImage = $job->image
             ? Storage::url($job->image)
             : ($profile?->banner_url
                 ? Storage::url($profile->banner_url)
                 : $appUrl . '/images/default-job-banner.png');
 
-        // Null-safe access for apply_before
         $applyBeforeDate = $job->apply_before ? new \DateTime($job->apply_before) : null;
         $now = new \DateTime();
-        $remainingdate = '';
+        $remainingdate = 'N/A';
         if ($applyBeforeDate) {
             $diff = $now->diff($applyBeforeDate);
             if ($diff->invert) {
@@ -202,13 +176,10 @@ class JobController extends Controller
             } else {
                 $remainingdate = $diff->days . ' days left';
             }
-        } else {
-            $remainingdate = 'N/A';
         }
 
-        // Null-safe access for created_at
         $postedDate = $job->created_at ? new \DateTime($job->created_at) : null;
-        $posted = '';
+        $posted = 'N/A';
         if ($postedDate) {
             $postedDiff = $now->diff($postedDate);
             if ($postedDiff->days === 0) {
@@ -218,11 +189,8 @@ class JobController extends Controller
             } else {
                 $posted = $postedDiff->days . ' days ago';
             }
-        } else {
-            $posted = 'N/A';
         }
 
-        // Handle key_points - ensure it's an array
         $keyPoints = $job->key_points;
         if (is_string($keyPoints)) {
             $keyPoints = json_decode($keyPoints, true);
@@ -230,78 +198,61 @@ class JobController extends Controller
         $keyPoints = is_array($keyPoints) ? array_filter($keyPoints) : [];
 
         return [
-            'id' => $job->id,
-            'title' => $job->title,
-            'description' => $job->description,
-            'location' => $job->location,
-            'classification' => $job->classification,
-            'work_type' => $job->work_type,
-            'workplace' => $job->workplace,
-            'salary' => $job->salary,
-            'salary_type' => $job->salary_type,
-            'company' => $job->company,
-            'logo' => $companyLogo, // Processed logo URL
-            'image' => $bannerImage, // Processed banner image URL
-            'apply_before_raw' => $job->apply_before, // Keep raw date if needed
-            'video_url' => $job->video_url,
-            'key_points' => $keyPoints,
-            'package' => $job->package,
-            'is_published' => $job->is_published,
-            'created_at_raw' => $job->created_at, // Keep raw date if needed
-            'remainingdate' => $remainingdate, // Formatted string
-            'posted' => $posted, // Formatted string
-            'employer_id' => $job->employer_id, // Important for ownership checks
+            'id'            => $job->id,
+            'title'         => $job->title,
+            'description'   => $job->description,
+            'location'      => $job->location,
+            'classification'=> $job->classification,
+            'work_type'     => $job->work_type,
+            'workplace'     => $job->workplace,
+            'salary'        => $job->salary,
+            'salary_type'   => $job->salary_type,
+            'company'       => $job->company,
+            'logo'          => $companyLogo,
+            'image'         => $bannerImage,
+            'apply_before_raw' => $job->apply_before,
+            'video_url'     => $job->video_url,
+            'key_points'    => $keyPoints,
+            'is_published'  => $job->is_published,
+            'created_at_raw'=> $job->created_at,
+            'remainingdate' => $remainingdate,
+            'posted'        => $posted,
+            'employer_id'   => $job->employer_id,
+            'package_id'    => $job->package_id, // include package_id for frontend
         ];
     }
 
+
     /**
      * Get jobs posted by the authenticated employer.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function getEmployerJobs(Request $request)
     {
         $user = Auth::user();
-
         if (!$user || $user->role !== 'employer') {
             return response()->json(['error' => 'Unauthorized.'], 403);
         }
 
-        // Fetch jobs posted by this specific employer (employer_id)
         $jobs = Job::where('employer_id', $user->id)
-                    ->latest() // Order by latest posted
-                    ->with('employer.profile') // Eager load employer and their profile for processJobForFrontend
-                    ->get()
-                    ->map(function ($job) {
-                        return $this->processJobForFrontend($job);
-                    });
+            ->latest()
+            ->with('employer.profile')
+            ->get()
+            ->map(fn($job) => $this->processJobForFrontend($job));
 
         return response()->json([
             'message' => 'Employer jobs fetched successfully.',
-            'jobs' => $jobs
+            'jobs'    => $jobs
         ]);
     }
 
     /**
-     * Update the specified job in storage.
-     * Only the employer who posted it can update it.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Job  $job
-     * @return \Illuminate\Http\JsonResponse
+     * Update the specified job.
      */
     public function update(Request $request, Job $job)
     {
         $user = Auth::user();
 
-        // Ensure logged-in user is the job owner
-        if (!$user || $user->id !== $job->employer_id) { // Use employer_id
-            Log::warning('Unauthorized attempt to update job.', [
-                'user_id' => $user->id ?? 'guest',
-                'job_id' => $job->id,
-                'owner_id' => $job->employer_id
-            ]);
+        if (!$user || $user->id !== $job->employer_id) {
             return response()->json(['error' => 'Unauthorized to update this job.'], 403);
         }
 
@@ -316,79 +267,58 @@ class JobController extends Controller
                 'salary' => 'required|string|max:255',
                 'salary_type' => 'required|string|in:Annual,Hourly,Contract',
                 'company' => 'required|string|max:255',
-                'logo' => 'nullable|image|max:2048', // For new logo upload
-                'image' => 'nullable|image|max:2048', // For new banner upload
+                'logo' => 'nullable|image|max:2048',
+                'image' => 'nullable|image|max:2048',
                 'apply_before' => 'required|date',
                 'video_url' => 'nullable|url',
                 'key_points' => 'nullable|array',
-                'package' => 'required|string',
-                'is_published' => 'boolean', // Allow updating publish status
+                'is_published' => 'boolean',
             ]);
 
-            // Handle logo update
             if ($request->hasFile('logo')) {
-                // Delete old logo if exists
                 if ($job->logo_path) {
                     Storage::disk('public')->delete($job->logo_path);
                 }
                 $validatedData['logo_path'] = $request->file('logo')->store('job-logos', 'public');
+                unset($validatedData['logo']);
             } else {
-                // If no new file, but logo field is present in request (e.g., as null for removal)
-                // Or if you want to keep existing logo if 'logo' field is not sent
-                unset($validatedData['logo']); // Remove 'logo' from validatedData to prevent mass assignment error
+                unset($validatedData['logo']);
             }
 
-            // Handle image (banner) update
             if ($request->hasFile('image')) {
-                // Delete old image if exists
                 if ($job->image) {
                     Storage::disk('public')->delete($job->image);
                 }
                 $validatedData['image'] = $request->file('image')->store('job-banners', 'public');
             } else {
-                unset($validatedData['image']); // Remove 'image' from validatedData
+                unset($validatedData['image']);
             }
 
             $job->update($validatedData);
 
-            Log::info('Job updated successfully.', ['job_id' => $job->id, 'user_id' => $user->id]);
-
             return response()->json([
                 'message' => 'Job updated successfully.',
-                'job' => $job
+                'job'     => $job
             ]);
         } catch (ValidationException $e) {
-            Log::error('Job update validation failed:', ['errors' => $e->errors()]);
             return response()->json(['errors' => $e->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Error updating job: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json(['error' => 'An unexpected error occurred while updating the job.'], 500);
         }
     }
 
     /**
-     * Remove the specified job from storage.
-     * Only the employer who posted it can delete it.
-     *
-     * @param  \App\Models\Job  $job
-     * @return \Illuminate\Http\JsonResponse
+     * Remove the specified job.
      */
     public function destroy(Job $job)
     {
         $user = Auth::user();
 
-        // Ensure logged-in user is the job owner
-        if (!$user || $user->id !== $job->employer_id) { // Use employer_id
-            Log::warning('Unauthorized attempt to delete job.', [
-                'user_id' => $user->id ?? 'guest',
-                'job_id' => $job->id,
-                'owner_id' => $job->employer_id
-            ]);
+        if (!$user || $user->id !== $job->employer_id) {
             return response()->json(['error' => 'Unauthorized to delete this job.'], 403);
         }
 
         try {
-            // Delete associated files before deleting the record
             if ($job->logo_path) {
                 Storage::disk('public')->delete($job->logo_path);
             }
@@ -397,10 +327,8 @@ class JobController extends Controller
             }
 
             $job->delete();
-            Log::info('Job deleted successfully.', ['job_id' => $job->id, 'user_id' => $user->id]);
             return response()->json(['message' => 'Job deleted successfully.']);
         } catch (\Exception $e) {
-            Log::error('Error deleting job: ' . $e->getMessage(), ['exception' => $e]);
             return response()->json(['error' => 'An unexpected error occurred while deleting the job.'], 500);
         }
     }

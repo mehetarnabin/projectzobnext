@@ -13,14 +13,14 @@ class SubscriptionPlanSeeder extends Seeder
         SubscriptionPlan::insert([
             [
                 'plan_type' => 'employer',
-                'name' => 'Basic',
-                'price' => 49,
+                'name' => 'Free',
+                'price' => 0,
                 'description' => 'Reach a small pool of candidates.',
                 'features' => json_encode([
                     'visibility' => true,
                     'highlight' => false,
                     'analytics' => false,
-                    'duration' => '7 Days',
+                    'duration' => '1 Days',
                     'priorityListing' => false,
                     'branding' => false,
                     'socialPromo' => false,
@@ -31,7 +31,7 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'plan_type' => 'employer',
-                'name' => 'Intermediate',
+                'name' => 'Basic',
                 'price' => 99,
                 'description' => 'Better visibility with more reach.',
                 'features' => json_encode([
@@ -49,14 +49,14 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'plan_type' => 'employer',
-                'name' => 'Premium',
+                'name' => 'Advance',
                 'price' => 149,
                 'description' => 'Top visibility and branding.',
                 'features' => json_encode([
                     'visibility' => true,
                     'highlight' => true,
                     'analytics' => true,
-                    'duration' => '21 Days',
+                    'duration' => '30 Days',
                     'priorityListing' => true,
                     'branding' => true,
                     'socialPromo' => true,
@@ -67,14 +67,14 @@ class SubscriptionPlanSeeder extends Seeder
             ],
             [
                 'plan_type' => 'employer',
-                'name' => 'Elite',
+                'name' => 'Premium',
                 'price' => 199,
                 'description' => 'Maximum reach with priority support.',
                 'features' => json_encode([
                     'visibility' => true,
                     'highlight' => true,
                     'analytics' => true,
-                    'duration' => '30 Days',
+                    'duration' => '60 Days',
                     'priorityListing' => true,
                     'branding' => true,
                     'socialPromo' => true,

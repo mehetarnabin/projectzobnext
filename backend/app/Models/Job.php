@@ -22,9 +22,9 @@ class Job extends Model
         'company',
         'logo_path',
         'apply_before',
-        'video_url',
+        'video_path',
         'key_points',
-        'package',
+        'package_id',
         'is_published'
     ];
 
@@ -50,4 +50,10 @@ class Job extends Model
     {
         return 'id';
     }
+
+    public function package()
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'package_id');
+    }
+
 }

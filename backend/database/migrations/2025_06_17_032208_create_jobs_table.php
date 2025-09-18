@@ -9,7 +9,7 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up(): void
+     public function up(): void
     {
         Schema::create('jobs', function (Blueprint $table) {
             $table->id();
@@ -24,8 +24,9 @@ return new class extends Migration
             $table->string('salary_type');
             $table->string('company');
             $table->string('logo_path')->nullable();
+            $table->string('image')->nullable();
+            $table->string('video_path')->nullable();
             $table->date('apply_before');
-            $table->string('video_url')->nullable();
             $table->json('key_points')->nullable();
             $table->string('package');
             $table->boolean('is_published')->default(false);
@@ -33,9 +34,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('jobs');

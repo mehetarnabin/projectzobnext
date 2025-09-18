@@ -46,25 +46,27 @@ const PostJobPage = () => {
       }
 
       const form = new FormData();
-      const { logo, keyPoints, packageData, ...restData } = formData;
+      const { logo, video_path, keyPoints, packageData, ...restData } = formData;
 
-      // Append rest of data
+      // Append the rest of the data in snake_case
       const payload = preparePayload(restData);
       Object.entries(payload).forEach(([key, value]) => {
         if (value !== undefined && value !== null) form.append(key, value);
       });
 
-      // Append package
-      if (packageData?.id) form.append("package", packageData.id);
-      else if (packageData?.name) form.append("package", packageData.name);
+      // Append package_id (required by backend)
+      if (packageData?.id) form.append("package_id", packageData.id);
 
       // Append key points
-      if (keyPoints?.length) keyPoints.forEach((kp) => form.append("key_points[]", kp));
+      if (keyPoints?.length) {
+        keyPoints.forEach((kp) => form.append("key_points[]", kp));
+      }
 
-      // Append logo
+      // Append files if available
       if (logo) form.append("logo", logo);
+      if (video_path) form.append("video_path", video_path);
 
-      // POST job
+      // POST job to backend
       const response = await api.post("/jobs", form, {
         headers: {
           Accept: "application/json",
@@ -75,8 +77,8 @@ const PostJobPage = () => {
       console.log("Job posted successfully:", response.data);
       alert("✅ Job posted successfully!");
       navigate("/employer/dashboard");
-
     } catch (error) {
+      // Handle backend validation errors
       const message =
         error.response?.data?.message ||
         (error.response?.data?.errors

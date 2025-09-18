@@ -13,16 +13,18 @@ use App\Http\Controllers\JobApplicationController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SubscriptionPlanController;
+use App\Http\Controllers\StripeController;
 use App\Models\Job;
-use App\Models\JobApplication;
 use App\Models\Company;
 use App\Models\User;
 
-// ==================== Public Auth Routes ====================
+// ==================== Public Routes ====================
+
+// Auth
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// ==================== Public Company Search ====================
+// Company search
 Route::get('/companies/search', function (Request $request) {
     $query = $request->input('query');
     if (!$query) return response()->json([]);
@@ -33,7 +35,7 @@ Route::get('/companies/search', function (Request $request) {
     return response()->json($companies);
 });
 
-// ==================== Test DB Connection ====================
+// Test DB connection
 Route::get('/test-db-connection', function () {
     try {
         DB::connection()->getPdo();
@@ -41,28 +43,20 @@ Route::get('/test-db-connection', function () {
         $jobIdToTest = 4;
         $job = Job::find($jobIdToTest);
 
-        if ($job) {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Successfully connected to database and found job.',
-                'database' => $dbName,
-                'job_found' => true,
-                'job_id' => $job->id,
-                'job_title' => $job->title,
-                'job_is_published' => $job->is_published
-            ]);
-        } else {
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Successfully connected to database but job ' . $jobIdToTest . ' NOT found.',
-                'database' => $dbName,
-                'job_found' => false
-            ]);
-        }
+        return response()->json([
+            'status' => 'success',
+            'database' => $dbName,
+            'job_found' => (bool) $job,
+            'job' => $job ? [
+                'id' => $job->id,
+                'title' => $job->title,
+                'is_published' => $job->is_published
+            ] : null
+        ]);
     } catch (\Exception $e) {
         return response()->json([
             'status' => 'error',
-            'message' => 'Could not connect to the database or an error occurred: ' . $e->getMessage(),
+            'message' => 'Database connection failed: ' . $e->getMessage(),
             'error_details' => [
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
@@ -71,33 +65,33 @@ Route::get('/test-db-connection', function () {
     }
 });
 
-// ==================== Public Routes ====================
-Route::get('/users', [UserController::class, 'index']);
-Route::post('/contact', [ContactController::class, 'store']);
+// Public jobs
 Route::get('/jobs', [JobController::class, 'index']);
-Route::get('/jobs/{jobId}', function ($jobId) {
-    $job = Job::find($jobId);
-    if (!$job) return response()->json(['error' => 'Job not found.'], 404);
-    return (new JobController())->show($job, request());
-})->name('jobs.show');
+Route::get('/jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
+Route::get('/jobs/categories', [JobController::class, 'categories']);
+Route::get('/jobs/featured', [JobController::class, 'featured']);
+Route::get('/jobs/trending', [JobController::class, 'trending']);
+Route::get('/employers/featured', [JobController::class, 'featuredEmployers']);
 
 // Public events
 Route::get('/events', [EventController::class, 'index']);
-Route::get('/events/{slug}', [EventController::class, 'showBySlug']); // show by slug
+Route::get('/events/{slug}', [EventController::class, 'showBySlug']); 
 
-
-//Public subscription
+// Public subscription plans
 Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+
+// Contact form
+Route::post('/contact', [ContactController::class, 'store']);
 
 // ==================== Protected User Routes ====================
 Route::middleware('auth:api')->group(function () {
 
-    // Auth
+    // ---------------- Auth ----------------
     Route::get('/user', [AuthController::class, 'getAuthenticatedUser']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/refresh', [AuthController::class, 'refresh']);
 
-    // Profile Routes
+    // ---------------- Profile ----------------
     Route::prefix('profile')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::post('/header', [ProfileController::class, 'updateHeader']);
@@ -110,7 +104,33 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/licenses', [ProfileController::class, 'updateLicenses']);
     });
 
-    // Employer Profile
+    // ---------------- Stripe Payment ----------------
+    Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']); // Paid package
+    Route::post('/confirm-payment', [StripeController::class, 'confirmPayment']); // Confirm paid
+    Route::post('/confirm-free-package', [StripeController::class, 'confirmFreePackage']); // Free package
+
+    // ---------------- Jobs ----------------
+    Route::post('/jobs', [JobController::class, 'store']); // Create job draft
+    Route::put('/jobs/{job}', [JobController::class, 'update']); // Update draft/published job
+    Route::delete('/jobs/{job}', [JobController::class, 'destroy']); // Delete job
+    Route::get('/employer/jobs', [JobController::class, 'getEmployerJobs']); // List employer jobs
+
+    // ---------------- Job Applications ----------------
+    Route::prefix('applications')->group(function () {
+        Route::post('/{jobId}/apply', [JobApplicationController::class, 'startApplication']);
+        Route::post('/{applicationId}/next-step', [JobApplicationController::class, 'nextStep']);
+        Route::post('/{applicationId}/back-step', [JobApplicationController::class, 'backStep']);
+        Route::get('/{applicationId}/experience', [JobApplicationController::class, 'getExperience']);
+        Route::post('/{applicationId}/experience', [JobApplicationController::class, 'saveExperience']);
+        Route::get('/{applicationId}/education', [JobApplicationController::class, 'getEducation']);
+        Route::post('/{applicationId}/education', [JobApplicationController::class, 'saveEducation']);
+        Route::get('/{applicationId}/certifications', [JobApplicationController::class, 'getCertifications']);
+        Route::post('/{applicationId}/certifications', [JobApplicationController::class, 'saveCertifications']);
+        Route::post('/{applicationId}/submit', [JobApplicationController::class, 'submitApplication']);
+    });
+    Route::get('/user/applications', [JobApplicationController::class, 'getUserApplications']);
+
+    // ---------------- Employer Profile ----------------
     Route::prefix('employer-profile')->group(function () {
         Route::get('/', [ProfileController::class, 'showEmployerProfile']);
         Route::post('/company-header', [ProfileController::class, 'updateCompanyHeader']);
@@ -125,113 +145,52 @@ Route::middleware('auth:api')->group(function () {
                             ->get()
                             ->map(function ($manager) {
                                 $profile = $manager->profile()->first();
-                                $manager->logo_url = $profile ? (str_starts_with($profile->logo_url, 'images/default_') ? asset($profile->logo_url) : asset('storage/' . $profile->logo_url)) : asset('images/default_profile.jpg');
+                                $manager->logo_url = $profile 
+                                    ? (str_starts_with($profile->logo_url, 'images/default_') 
+                                        ? asset($profile->logo_url) 
+                                        : asset('storage/' . $profile->logo_url)) 
+                                    : asset('images/default_profile.jpg');
                                 return $manager;
                             });
             return response()->json($managers);
         });
     });
 
-    // Job Routes
-    Route::post('/jobs', [JobController::class, 'store']);
-    Route::put('/jobs/{job}', [JobController::class, 'update']);
-    Route::delete('/jobs/{job}', [JobController::class, 'destroy']);
-
-    // Job Applications
-    Route::prefix('applications')->group(function () {
-        Route::post('/{jobId}/apply', function ($jobId) {
-            $job = Job::find($jobId);
-            if (!$job) return response()->json(['error' => 'Job not found.'], 404);
-            return (new JobApplicationController())->startApplication($job);
-        });
-        Route::post('/{applicationId}/next-step', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->nextStep($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('/{applicationId}/back-step', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->backStep($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::get('/{applicationId}/experience', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->getExperience($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('/{applicationId}/experience', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->saveExperience($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::get('/{applicationId}/education', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->getEducation($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('/{applicationId}/education', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->saveEducation($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::get('/{applicationId}/certifications', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->getCertifications($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('/{applicationId}/certifications', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->saveCertifications($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('/{applicationId}/submit', function ($applicationId) {
-            return (new JobApplicationController())->submitApplication(JobApplication::findOrFail($applicationId));
-        });
-    });
-
-    Route::get('/user/applications', [JobApplicationController::class, 'getUserApplications']);
-
-    // Employer Routes
+    // ---------------- Employer Specific ----------------
     Route::prefix('employer')->group(function () {
         Route::get('jobs', [JobController::class, 'getEmployerJobs']);
-        Route::post('jobs', [JobController::class, 'store']);
         Route::get('applicants', [JobApplicationController::class, 'getEmployerApplicants']);
-        Route::get('applicants/{applicationId}', function ($applicationId) {
-            return (new JobApplicationController())->showApplicantDetails(JobApplication::findOrFail($applicationId));
-        });
-        Route::post('applicants/{applicationId}/status', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->updateApplicationStatus($request, JobApplication::findOrFail($applicationId));
-        });
-        Route::post('applicants/{applicationId}/request-documents', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->requestAdditionalDocuments($request, JobApplication::findOrFail($applicationId));
-        });
+        Route::get('applicants/{applicationId}', [JobApplicationController::class, 'showApplicantDetails']);
+        Route::post('applicants/{applicationId}/status', [JobApplicationController::class, 'updateApplicationStatus']);
+        Route::post('applicants/{applicationId}/request-documents', [JobApplicationController::class, 'requestAdditionalDocuments']);
         Route::get('applicant-counts', [JobApplicationController::class, 'getApplicantCounts']);
-        Route::get('jobs/{jobId}/applicants', function ($jobId) {
-            return (new JobApplicationController())->getApplicantsForJob(Job::findOrFail($jobId), request());
-        });
+        Route::get('jobs/{jobId}/applicants', [JobApplicationController::class, 'getApplicantsForJob']);
         Route::get('latest-activities', [JobApplicationController::class, 'getLatestActivities']);
-        Route::post('applicants/{applicationId}/schedule-interview', function ($applicationId, Request $request) {
-            return (new JobApplicationController())->scheduleInterview($request, JobApplication::findOrFail($applicationId));
-        });
+        Route::post('applicants/{applicationId}/schedule-interview', [JobApplicationController::class, 'scheduleInterview']);
         Route::get('/scheduled-interviews', [JobApplicationController::class, 'getScheduledInterviews']);
     });
 
-    // Protected Event Routes
-    Route::middleware('auth:api')->group(function () {
-        Route::prefix('events')->group(function () {
-            Route::post('/', [EventController::class, 'store']);
-            Route::get('/{id}', [EventController::class, 'show']);
-            // routes/api.php
-
-            Route::put('/{id}', [EventController::class, 'update']);
-            Route::delete('/{id}', [EventController::class, 'destroy']);
-        });
+    // ---------------- Event Management ----------------
+    Route::prefix('events')->group(function () {
+        Route::post('/', [EventController::class, 'store']);
+        Route::get('/{id}', [EventController::class, 'show']);
+        Route::put('/{id}', [EventController::class, 'update']);
+        Route::delete('/{id}', [EventController::class, 'destroy']);
     });
-
-
+    
 });
 
-    // ==================== Admin Routes ====================
-   Route::prefix('admin')->group(function () {
+// ==================== Stripe Webhook (must be public) ====================
+Route::post('/stripe/webhook', [StripeController::class, 'handleWebhook']);
+
+// ==================== Admin Routes ====================
+Route::prefix('admin')->group(function () {
     Route::post('/register', [AdminController::class, 'register']);
     Route::post('/login', [AdminController::class, 'login']);
 
     Route::middleware('auth:admin')->group(function () {
-       
         Route::post('/subscription-plans', [SubscriptionPlanController::class, 'store']);
         Route::put('/subscription-plans/{id}', [SubscriptionPlanController::class, 'update']);
         Route::delete('/subscription-plans/{id}', [SubscriptionPlanController::class, 'destroy']);
     });
 });
-
-
-
-
-        
-
-
-    

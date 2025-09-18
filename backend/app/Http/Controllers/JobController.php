@@ -39,13 +39,14 @@ class JobController extends Controller
                 'logo' => 'nullable|image|max:2048',
                 'image' => 'nullable|image|max:2048',
                 'apply_before' => 'required|date',
-                'video_url' => 'nullable|url',
+                'video' => 'nullable|file|mimes:mp4,mov,avi|max:10240', // 10MB max
                 'key_points' => 'nullable|array',
                 'package_id' => 'required|exists:subscription_plans,id',
             ]);
 
             $jobLogo = $request->hasFile('logo') ? $request->file('logo')->store('job-logos', 'public') : null;
             $jobBanner = $request->hasFile('image') ? $request->file('image')->store('job-banners', 'public') : null;
+            $jobVideo = $request->hasFile('video') ? $request->file('video')->store('job-videos', 'public') : null;
 
             $job = Job::create([
                 'employer_id'   => $user->id,
@@ -61,7 +62,7 @@ class JobController extends Controller
                 'logo_path'     => $jobLogo,
                 'image'         => $jobBanner,
                 'apply_before'  => $validated['apply_before'],
-                'video_url'     => $validated['video_url'] ?? null,
+                'video_path'    => $jobVideo,
                 'key_points'    => $validated['key_points'] ?? null,
                 'package_id'    => $validated['package_id'],
                 'is_published'  => false,
@@ -84,7 +85,6 @@ class JobController extends Controller
             return response()->json(['error' => 'Unexpected error occurred while creating the job.'], 500);
         }
     }
-
 
     /**
      * Display a listing of jobs (public view).
@@ -211,17 +211,16 @@ class JobController extends Controller
             'logo'          => $companyLogo,
             'image'         => $bannerImage,
             'apply_before_raw' => $job->apply_before,
-            'video_url'     => $job->video_url,
+            'video_path'    => $job->video_path ? Storage::url($job->video_path) : null,
             'key_points'    => $keyPoints,
             'is_published'  => $job->is_published,
             'created_at_raw'=> $job->created_at,
             'remainingdate' => $remainingdate,
             'posted'        => $posted,
             'employer_id'   => $job->employer_id,
-            'package_id'    => $job->package_id, // include package_id for frontend
+            'package_id'    => $job->package_id,
         ];
     }
-
 
     /**
      * Get jobs posted by the authenticated employer.
@@ -269,8 +268,8 @@ class JobController extends Controller
                 'company' => 'required|string|max:255',
                 'logo' => 'nullable|image|max:2048',
                 'image' => 'nullable|image|max:2048',
+                'video' => 'nullable|file|mimes:mp4,mov,avi|max:10240', // 10MB max
                 'apply_before' => 'required|date',
-                'video_url' => 'nullable|url',
                 'key_points' => 'nullable|array',
                 'is_published' => 'boolean',
             ]);
@@ -292,6 +291,15 @@ class JobController extends Controller
                 $validatedData['image'] = $request->file('image')->store('job-banners', 'public');
             } else {
                 unset($validatedData['image']);
+            }
+
+            if ($request->hasFile('video')) {
+                if ($job->video_path) {
+                    Storage::disk('public')->delete($job->video_path);
+                }
+                $validatedData['video_path'] = $request->file('video')->store('job-videos', 'public');
+            } else {
+                unset($validatedData['video_path']);
             }
 
             $job->update($validatedData);
@@ -324,6 +332,9 @@ class JobController extends Controller
             }
             if ($job->image) {
                 Storage::disk('public')->delete($job->image);
+            }
+            if ($job->video_path) {
+                Storage::disk('public')->delete($job->video_path);
             }
 
             $job->delete();

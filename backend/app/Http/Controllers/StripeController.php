@@ -9,6 +9,8 @@ use App\Models\SubscriptionPlan;
 use App\Models\Job;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
+use Illuminate\Support\Facades\Log;
+
 
 class StripeController extends Controller
 {
@@ -139,34 +141,44 @@ class StripeController extends Controller
         return response()->json(['status' => 'success']);
     }
 
-        public function confirmFreePackage(Request $request)
-    {
+    public function confirmFreePackage(Request $request)
+{
+    try {
         $user = Auth::user();
-        if (!$user || !$user->isEmployer()) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+        if (!$user || $user->role !== 'employer') {
+            return response()->json(['message' => 'Unauthorized: only employers can confirm free package'], 403);
         }
 
-        $request->validate([
+        $validated = $request->validate([
             'job_id' => 'required|exists:jobs,id',
             'package_id' => 'required|exists:subscription_plans,id',
         ]);
 
-        $job = Job::findOrFail($request->job_id);
+        $job = Job::findOrFail($validated['job_id']);
         $job->is_published = true;
         $job->save();
 
-        // Record transaction with amount = 0
-        \App\Models\Transaction::create([
+        Transaction::create([
             'user_id' => $user->id,
             'job_id' => $job->id,
-            'package_id' => $request->package_id,
+            'package_id' => $validated['package_id'],
             'amount' => 0,
             'currency' => 'usd',
             'status' => 'succeeded',
             'stripe_payment_id' => null,
         ]);
 
-        return response()->json(['message' => 'Free package applied successfully.']);
+        return response()->json(['message' => 'Free package applied successfully.'], 200);
+
+    } catch (\Exception $e) {
+        Log::error('Error in confirmFreePackage:', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+        ]);
+        return response()->json(['error' => 'Failed to confirm free package.'], 500);
     }
+}
+
 
 }

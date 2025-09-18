@@ -45,10 +45,17 @@ const JobStep4 = ({ formData = {}, onBack, onComplete }) => {
           return;
         }
 
-        await api.post("/confirm-free-package", {
-          job_id: jobIdToSend,
-          package_id: selectedPackage.id,
-        });
+        await api.post(
+          "/confirm-free-package",
+          {
+            job_id: jobIdToSend,
+            package_id: selectedPackage.id,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` }, // ✅ ensure auth
+          }
+        );
+
         onComplete();
         return;
       }
@@ -56,16 +63,20 @@ const JobStep4 = ({ formData = {}, onBack, onComplete }) => {
       // ===== Paid package =====
       if (!stripe || !elements) throw new Error("Stripe not loaded.");
 
-      // Create PaymentIntent
-      const { data: intentData } = await api.post("/create-payment-intent", {
-        package_id: selectedPackage.id,
-        job_id: jobIdToSend,
-      });
+      const { data: intentData } = await api.post(
+        "/create-payment-intent",
+        {
+          package_id: selectedPackage.id,
+          job_id: jobIdToSend,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }, // ✅ ensure auth
+        }
+      );
 
       const cardElement = elements.getElement(CardElement);
       if (!cardElement) throw new Error("Card details are required.");
 
-      // Confirm payment with Stripe
       const { error: stripeError, paymentIntent } =
         await stripe.confirmCardPayment(intentData.clientSecret, {
           payment_method: { card: cardElement },
@@ -74,10 +85,16 @@ const JobStep4 = ({ formData = {}, onBack, onComplete }) => {
       if (stripeError) throw new Error(stripeError.message);
 
       if (paymentIntent.status === "succeeded") {
-        await api.post("/confirm-payment", {
-          payment_intent_id: paymentIntent.id,
-          job_id: jobIdToSend,
-        });
+        await api.post(
+          "/confirm-payment",
+          {
+            payment_intent_id: paymentIntent.id,
+            job_id: jobIdToSend,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         onComplete();
       } else {
         setError(

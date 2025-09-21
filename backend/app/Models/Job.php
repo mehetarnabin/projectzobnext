@@ -25,7 +25,8 @@ class Job extends Model
         'video_path',
         'key_points',
         'package_id',
-        'is_published'
+        'is_published',
+        'image',
     ];
 
     protected $casts = [
@@ -39,21 +40,20 @@ class Job extends Model
         return $this->belongsTo(User::class, 'employer_id');
     }
 
-    /**
-     * Get the route key for the model.
-     * This explicitly tells Laravel to use the 'id' column for Route Model Binding.
-     * Even though 'id' is default, sometimes this helps resolve ambiguity.
-     *
-     * @return string
-     */
-    public function getRouteKeyName()
-    {
-        return 'id';
-    }
-
     public function package()
     {
         return $this->belongsTo(SubscriptionPlan::class, 'package_id');
     }
 
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'job_id')
+                    ->where('job_posted', true)
+                    ->where('amount', '>', 0);
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'id';
+    }
 }

@@ -83,43 +83,40 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
       return;
     }
 
-    let jobId = null;
-
     try {
+      // Always create a job (draft or pending payment)
+      const jobRes = await api.post("/jobs", {
+        title: "Draft Job",
+        description: "Draft description",
+        location: "TBD",
+        classification: "General",
+        work_type: "Full Time",
+        workplace: "Remote",
+        salary: "TBD",
+        salary_type: "Annual",
+        company: "TBD",
+        apply_before: new Date().toISOString().split("T")[0],
+        package_id: selectedPackageObj.id,
+        status: selectedPackageObj.price > 0 ? "pending_payment" : "draft",
+      });
+
+      const jobId = jobRes.data.job?.id || jobRes.data.job_id;
+
       if (selectedPackageObj.price <= 0) {
-        // Free package: create draft job
-        const jobRes = await api.post("/jobs", {
-          title: "Draft Job",
-          description: "Draft description",
-          location: "TBD",
-          classification: "General",
-          work_type: "Full Time",
-          workplace: "Remote",
-          salary: "TBD",
-          salary_type: "Annual",
-          company: "TBD",
-          apply_before: new Date().toISOString().split("T")[0],
-          package_id: selectedPackageObj.id,
-        });
-
-        jobId = jobRes.data.job?.id || jobRes.data.job_id;
-
-        // Confirm free package
+        // Free package: confirm immediately
         await api.post("/confirm-free-package", {
           job_id: jobId,
           package_id: selectedPackageObj.id,
         });
       }
 
-      // For paid packages, pass package info; payment happens next step
+      // Pass job and package info to next step
       onNext({ packageData: selectedPackageObj, id: jobId });
     } catch (err) {
       console.error("Error creating job:", err.response?.data || err.message);
 
       if (err.response?.status === 401) {
         alert("You are not authenticated. Please log in again.");
-        // Optionally redirect to login page
-        // window.location.href = "/login";
       } else {
         alert("Failed to create job. Check console for details.");
       }
@@ -141,6 +138,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Package Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {packages.map((pkg) => (
           <div
@@ -182,6 +180,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
         ))}
       </div>
 
+      {/* Feature Comparison Table */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-md">
         <table className="w-full table-auto border-collapse text-sm">
           <thead>
@@ -212,6 +211,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
         </table>
       </div>
 
+      {/* Navigation Buttons */}
       <div className="flex justify-between mt-8">
         <button
           type="button"

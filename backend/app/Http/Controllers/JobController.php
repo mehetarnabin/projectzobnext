@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class JobController extends Controller
@@ -65,7 +66,7 @@ class JobController extends Controller
                 'video_path'    => $jobVideo,
                 'key_points'    => $validated['key_points'] ?? null,
                 'package_id'    => $validated['package_id'],
-                'is_published'  => false,
+                'is_published'  => true,
             ]);
 
             return response()->json([
@@ -89,39 +90,33 @@ class JobController extends Controller
     /**
      * Display a listing of jobs (public view).
      */
-    public function index(Request $request)
+   /**
+ * Display a listing of paid jobs (public view).
+ */
+   public function index(Request $request)
     {
-        $query = Job::query()
-            ->where('is_published', true)
-            ->whereHas('transactions', function ($q) {
-                $q->where('status', 'succeeded');
-            });
+        try {
+            $jobs = Job::where('is_published', true)
+                ->whereHas('transactions', function ($q) {
+                    $q->where('job_posted', true)
+                    ->where('amount', '>', 0)
+                    ->where('status', 'succeeded');
+                })
+                ->with(['employer.profile', 'transactions'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(fn($job) => $this->processJobForFrontend($job));
 
-        if ($request->filled('title')) {
-            $keyword = $request->input('title');
-            $query->where(function ($q) use ($keyword) {
-                $q->where('title', 'like', '%' . $keyword . '%')
-                  ->orWhere('description', 'like', '%' . $keyword . '%')
-                  ->orWhere('company', 'like', '%' . $keyword . '%');
-            });
+            return response()->json([
+                'message' => 'Featured paid jobs fetched successfully.',
+                'jobs' => $jobs
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Featured jobs fetch error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch featured jobs.'], 500);
         }
-
-        if ($request->filled('location')) {
-            $location = $request->input('location');
-            $query->where('location', 'like', '%' . $location . '%');
-        }
-
-        if ($request->filled('classification')) {
-            $query->where('classification', $request->input('classification'));
-        }
-
-        $jobs = $query->with(['employer.profile', 'transactions'])
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(fn($job) => $this->processJobForFrontend($job));
-
-        return response()->json($jobs);
     }
+
 
     /**
      * Display a specific job.
@@ -343,4 +338,74 @@ class JobController extends Controller
             return response()->json(['error' => 'An unexpected error occurred while deleting the job.'], 500);
         }
     }
+
+
+    public function featuredEmployers()
+    {
+        try {
+            // Fetch distinct companies from paid jobs
+            $jobs = Job::where('is_published', true)
+                ->whereHas('transactions', function($q) {
+                    $q->where('job_posted', true)
+                      ->where('amount', '>', 0)
+                      ->where('status', 'succeeded');
+                })
+                ->select('company', 'logo_path')
+                ->distinct('company')
+                ->get();
+
+            $data = $jobs->map(function($job) {
+                return [
+                    'companyName' => $job->company,
+                    'logoUrl' => $job->logo_path ? asset('storage/'.$job->logo_path) : asset('images/default-company-logo.png')
+                ];
+            });
+
+            return response()->json([
+                'message' => 'Featured employers fetched successfully.',
+                'employers' => $data
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Featured employers fetch error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch featured employers.'], 500);
+        }
+    }
+
+   public function categoriesWithCount()
+    {
+        try {
+            $allCategories = ["IT", "Healthcare", "Construction", "Education", "Finance", "Marketing"];
+
+            // Count only published jobs that have successful transactions
+            $dbCategories = Job::where('is_published', true)
+                ->whereHas('transactions', fn($q) => $q
+                    ->where('job_posted', true)
+                    ->where('status', 'succeeded')
+                )
+                ->select(DB::raw('LOWER(TRIM(classification)) as classification'), DB::raw('COUNT(*) as count'))
+                ->groupBy(DB::raw('LOWER(TRIM(classification))'))
+                ->pluck('count', 'classification')
+                ->toArray();
+
+            // Merge with predefined categories
+            $categories = array_map(function ($cat) use ($dbCategories) {
+                $key = strtolower($cat);
+                return [
+                    'classification' => $cat,
+                    'count' => $dbCategories[$key] ?? 0,
+                ];
+            }, $allCategories);
+
+            return response()->json([
+                'message' => 'Categories with job count fetched successfully.',
+                'categories' => $categories
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Error fetching categories: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch categories'], 500);
+        }
+    }
+
+
+
 }

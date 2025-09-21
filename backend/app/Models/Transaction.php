@@ -13,24 +13,20 @@ class Transaction extends Model
         'user_id',
         'job_id',
         'package_id',
-        'stripe_payment_id',
         'amount',
         'currency',
         'status',
+        'stripe_payment_id',
+        'job_posted',
     ];
-
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
 
     public function job()
     {
-        return $this->belongsTo(Job::class);
+        return $this->belongsTo(Job::class, 'job_id');
     }
 
-    public function package()
+    public function user()
     {
-        return $this->belongsTo(SubscriptionPlan::class, 'package_id');
+        return $this->belongsTo(User::class, 'user_id'); // if needed
     }
 }

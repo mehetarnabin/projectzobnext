@@ -66,12 +66,14 @@ Route::get('/test-db-connection', function () {
 });
 
 // Public jobs
-Route::get('/jobs', [JobController::class, 'index']);
+Route::get('/jobs/featured', [JobController::class, 'index']);
 Route::get('/jobs/{job}', [JobController::class, 'show'])->name('jobs.show');
-Route::get('/jobs/categories', [JobController::class, 'categories']);
-Route::get('/jobs/featured', [JobController::class, 'featured']);
+Route::get('/categories-with-count', [JobController::class, 'categoriesWithCount']);
+//Route::get('/jobs/categories', [JobController::class, 'categoriesWithCount']);
+//Route::get('/jobs/featured', [JobController::class, 'featured']);
 Route::get('/jobs/trending', [JobController::class, 'trending']);
 Route::get('/employers/featured', [JobController::class, 'featuredEmployers']);
+
 
 // Public events
 Route::get('/events', [EventController::class, 'index']);

@@ -4,13 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use App\Models\Transaction;
 use App\Models\SubscriptionPlan;
 use App\Models\Job;
 use Stripe\Stripe;
 use Stripe\PaymentIntent;
-use Illuminate\Support\Facades\Log;
-
 
 class StripeController extends Controller
 {
@@ -19,9 +18,6 @@ class StripeController extends Controller
         Stripe::setApiKey(config('services.stripe.secret'));
     }
 
-    /**
-     * Create PaymentIntent for a job package.
-     */
     public function createPaymentIntent(Request $request)
     {
         $user = Auth::user();
@@ -31,30 +27,27 @@ class StripeController extends Controller
 
         $validated = $request->validate([
             'package_id' => 'required|exists:subscription_plans,id',
-            'job_id'     => 'nullable|exists:jobs,id',
+            'job_id' => 'nullable|exists:jobs,id',
         ]);
 
         $package = SubscriptionPlan::findOrFail($validated['package_id']);
 
         $intent = PaymentIntent::create([
-            'amount'   => $package->price * 100, // convert to cents
+            'amount' => $package->price * 100,
             'currency' => 'usd',
             'metadata' => [
-                'user_id'    => $user->id,
+                'user_id' => $user->id,
                 'package_id' => $package->id,
-                'job_id'     => $validated['job_id'] ?? null,
+                'job_id' => $validated['job_id'] ?? null,
             ],
         ]);
 
         return response()->json([
-            'clientSecret' => $intent->client_secret, // ✅ use this in frontend
-            'id'           => $intent->id,            // optional, for logs
+            'clientSecret' => $intent->client_secret,
+            'id' => $intent->id,
         ]);
     }
 
-    /**
-     * Confirm Payment manually (optional, since confirm happens client-side).
-     */
     public function confirmPayment(Request $request)
     {
         $user = Auth::user();
@@ -64,26 +57,33 @@ class StripeController extends Controller
 
         $request->validate([
             'payment_intent_id' => 'required|string',
-            'job_id'            => 'nullable|exists:jobs,id',
+            'job_id' => 'nullable|exists:jobs,id',
         ]);
 
-        $intent = PaymentIntent::retrieve($request->payment_intent_id);
+        try {
+            $intent = PaymentIntent::retrieve($request->payment_intent_id);
 
-        if ($intent->status === 'succeeded') {
+            if ($intent->status !== 'succeeded') {
+                return response()->json(['message' => 'Payment not successful yet.'], 400);
+            }
+
+            $jobId = $request->job_id ?? $intent->metadata->job_id ?? null;
+
             $transaction = Transaction::updateOrCreate(
                 ['stripe_payment_id' => $intent->id],
                 [
-                    'user_id'    => $user->id,
-                    'job_id'     => $request->job_id ?? null,
+                    'user_id' => $user->id,
+                    'job_id' => $jobId,
                     'package_id' => $intent->metadata->package_id ?? null,
-                    'amount'     => $intent->amount / 100,
-                    'currency'   => $intent->currency,
-                    'status'     => 'succeeded',
+                    'amount' => $intent->amount / 100,
+                    'currency' => $intent->currency,
+                    'status' => 'succeeded',
+                    'job_posted' => !empty($jobId),
                 ]
             );
 
-            if ($request->job_id) {
-                $job = Job::find($request->job_id);
+            if ($jobId) {
+                $job = Job::where('id', $jobId)->where('employer_id', $user->id)->first();
                 if ($job) {
                     $job->is_published = true;
                     $job->save();
@@ -91,17 +91,16 @@ class StripeController extends Controller
             }
 
             return response()->json([
-                'message' => 'Payment confirmed.',
+                'message' => 'Payment confirmed successfully.',
                 'transaction' => $transaction,
             ]);
-        }
 
-        return response()->json(['message' => 'Payment not successful yet.'], 400);
+        } catch (\Exception $e) {
+            Log::error('Error confirming payment:', ['message' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to confirm payment.'], 500);
+        }
     }
 
-    /**
-     * Handle Stripe Webhook events.
-     */
     public function handleWebhook(Request $request)
     {
         $payload = @file_get_contents('php://input');
@@ -116,21 +115,23 @@ class StripeController extends Controller
 
         if ($event->type === 'payment_intent.succeeded') {
             $intent = $event->data->object;
+            $jobId = $intent->metadata->job_id ?? null;
 
             Transaction::updateOrCreate(
                 ['stripe_payment_id' => $intent->id],
                 [
-                    'user_id'    => $intent->metadata->user_id ?? null,
-                    'job_id'     => $intent->metadata->job_id ?? null,
+                    'user_id' => $intent->metadata->user_id ?? null,
+                    'job_id' => $jobId,
                     'package_id' => $intent->metadata->package_id ?? null,
-                    'amount'     => $intent->amount / 100,
-                    'currency'   => $intent->currency,
-                    'status'     => 'succeeded',
+                    'amount' => $intent->amount / 100,
+                    'currency' => $intent->currency,
+                    'status' => 'succeeded',
+                    'job_posted' => !empty($jobId),
                 ]
             );
 
-            if (!empty($intent->metadata->job_id)) {
-                $job = Job::find($intent->metadata->job_id);
+            if ($jobId) {
+                $job = Job::find($jobId);
                 if ($job) {
                     $job->is_published = true;
                     $job->save();
@@ -142,11 +143,10 @@ class StripeController extends Controller
     }
 
     public function confirmFreePackage(Request $request)
-{
-    try {
+    {
         $user = Auth::user();
-        if (!$user || $user->role !== 'employer') {
-            return response()->json(['message' => 'Unauthorized: only employers can confirm free package'], 403);
+        if (!$user || !$user->isEmployer()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
@@ -154,7 +154,10 @@ class StripeController extends Controller
             'package_id' => 'required|exists:subscription_plans,id',
         ]);
 
-        $job = Job::findOrFail($validated['job_id']);
+        $job = Job::where('id', $validated['job_id'])
+                  ->where('employer_id', $user->id)
+                  ->firstOrFail();
+
         $job->is_published = true;
         $job->save();
 
@@ -166,19 +169,9 @@ class StripeController extends Controller
             'currency' => 'usd',
             'status' => 'succeeded',
             'stripe_payment_id' => null,
+            'job_posted' => true,
         ]);
 
         return response()->json(['message' => 'Free package applied successfully.'], 200);
-
-    } catch (\Exception $e) {
-        Log::error('Error in confirmFreePackage:', [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-        ]);
-        return response()->json(['error' => 'Failed to confirm free package.'], 500);
     }
-}
-
-
 }

@@ -90,37 +90,69 @@ class JobController extends Controller
     /**
      * Display a listing of jobs (public view).
      */
-   /**
- * Display a listing of paid jobs (public view).
- */
-   public function index(Request $request)
+   
+  public function index(Request $request)
     {
-        try {
-            $jobs = Job::where('is_published', true)
-                ->whereHas('transactions', function ($q) {
-                    $q->where('job_posted', true)
-                    ->where('amount', '>', 0)
-                    ->where('status', 'succeeded');
-                })
-                ->with(['employer.profile', 'transactions'])
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(fn($job) => $this->processJobForFrontend($job));
+        $query = Job::where('is_published', true);
 
-            return response()->json([
-                'message' => 'Featured paid jobs fetched successfully.',
-                'jobs' => $jobs
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Featured jobs fetch error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch featured jobs.'], 500);
+        // Filter by title/keywords/company
+        if ($request->filled('title')) {
+            $keyword = $request->input('title');
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', '%' . $keyword . '%')
+                ->orWhere('description', 'like', '%' . $keyword . '%')
+                ->orWhere('company', 'like', '%' . $keyword . '%');
+            });
         }
+
+        // Filter by location
+        if ($request->filled('location')) {
+            $query->where('location', 'like', '%' . $request->input('location') . '%');
+        }
+
+        // Filter by classification (multiple allowed: IT, Finance,…)
+        if ($request->filled('classification')) {
+            $classifications = explode(',', $request->input('classification'));
+            $query->whereIn('classification', $classifications);
+        }
+
+        // ✅ Filter by work type (Full Time, Part Time, Contract, Internship)
+        if ($request->filled('work_type')) {
+            $workTypes = explode(',', $request->input('work_type'));
+            $query->whereIn('work_type', $workTypes);
+        }
+
+        // ✅ Filter by workplace (On-site, Hybrid, Remote)
+        if ($request->filled('workplace')) {
+            $workplaces = explode(',', $request->input('workplace'));
+            $query->whereIn('workplace', $workplaces);
+        }
+
+        // ✅ Filter by salary range (example: 5000-10000)
+        if ($request->filled('salary')) {
+            $salaryRange = explode('-', $request->input('salary'));
+            if (count($salaryRange) === 2) {
+                $query->whereBetween('salary', [$salaryRange[0], $salaryRange[1]]);
+            }
+        }
+
+        // ✅ Filter by "listed time" (posted within X days)
+        if ($request->filled('listed_time')) {
+            $days = (int) $request->input('listed_time');
+            $query->where('created_at', '>=', now()->subDays($days));
+        }
+
+        $jobs = $query->with('employer.profile')
+                    ->orderBy('created_at', 'desc')
+                    ->get()
+                    ->map(fn($job) => $this->processJobForFrontend($job));
+
+        return response()->json($jobs);
     }
 
 
-    /**
-     * Display a specific job.
-     */
+    
+     
     public function show(Job $job, Request $request)
     {
         $job->load('employer.profile');
@@ -403,6 +435,31 @@ class JobController extends Controller
         } catch (\Throwable $e) {
             Log::error('Error fetching categories: ' . $e->getMessage());
             return response()->json(['error' => 'Failed to fetch categories'], 500);
+        }
+    }
+
+
+   public function paidJObs(Request $request)
+    {
+        try {
+            $jobs = Job::where('is_published', true)
+                ->whereHas('transactions', function ($q) {
+                    $q->where('job_posted', true)
+                    ->where('amount', '>', 0)
+                    ->where('status', 'succeeded');
+                })
+                ->with(['employer.profile', 'transactions'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(fn($job) => $this->processJobForFrontend($job));
+
+            return response()->json([
+                'message' => 'Featured paid jobs fetched successfully.',
+                'jobs' => $jobs
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Featured jobs fetch error: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch featured jobs.'], 500);
         }
     }
 

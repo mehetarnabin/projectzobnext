@@ -179,11 +179,12 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
           Previous
         </button>
         <button
-          onClick={onNext}
+          onClick={() => onNext(editableData)}
           className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
         >
           Next
         </button>
+
       </div>
     </div>
   );

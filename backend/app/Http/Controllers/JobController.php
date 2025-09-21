@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Job;
 use App\Models\Profile;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -19,79 +20,97 @@ class JobController extends Controller
      * Store a newly created job in storage.
      * Employer who is logged in will be the owner.
      */
-    public function store(Request $request)
+   public function store(Request $request)
     {
         $user = Auth::user();
-        if (!$user || !$user->isEmployer()) {
-            return response()->json(['error' => 'Unauthorized: Only employers can post jobs.'], 403);
-        }
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
 
         try {
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
-                'description' => 'required|string',
-                'location' => 'required|string|max:255',
-                'classification' => 'required|string|max:255',
-                'work_type' => 'required|string|in:Full Time,Part Time,Contract,Internship',
-                'workplace' => 'required|string|in:On-site,Hybrid,Remote',
-                'salary' => 'required|string|max:255',
-                'salary_type' => 'required|string|in:Annual,Hourly,Contract',
-                'company' => 'required|string|max:255',
-                'logo' => 'nullable|image|max:2048',
-                'image' => 'nullable|image|max:2048',
-                'apply_before' => 'required|date',
-                'video' => 'nullable|file|mimes:mp4,mov,avi|max:10240', // 10MB max
-                'key_points' => 'nullable|array',
+                'description' => 'nullable|string',
+                'location' => 'nullable|string',
+                'classification' => 'nullable|string',
+                'work_type' => 'nullable|string',
+                'workplace' => 'nullable|string',
+                'salary' => 'nullable|string',
+                'salary_type' => 'nullable|string',
+                'company' => 'nullable|string',
+                'apply_before' => 'nullable|date',
                 'package_id' => 'required|exists:subscription_plans,id',
+                'package_price' => 'required|numeric',
+                'logo' => 'nullable|image|max:2048',   // ✅ Job/company logo
+                'image' => 'nullable|image|max:2048',  // ✅ Job banner image
             ]);
 
-            $jobLogo = $request->hasFile('logo') ? $request->file('logo')->store('job-logos', 'public') : null;
-            $jobBanner = $request->hasFile('image') ? $request->file('image')->store('job-banners', 'public') : null;
-            $jobVideo = $request->hasFile('video') ? $request->file('video')->store('job-videos', 'public') : null;
+            $packagePrice = $validated['package_price'];
+            $isFree = $packagePrice <= 0;
 
+
+            // ✅ Handle logo upload
+            $logoPath = null;
+            if ($request->hasFile('logo')) {
+                $logoPath = $request->file('logo')->store('job-logos', 'public');
+            }
+
+            // ✅ Handle banner upload
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('job-banners', 'public');
+            }
+
+            // Create job
             $job = Job::create([
-                'employer_id'   => $user->id,
-                'title'         => $validated['title'],
-                'description'   => $validated['description'],
-                'location'      => $validated['location'],
-                'classification'=> $validated['classification'],
-                'work_type'     => $validated['work_type'],
-                'workplace'     => $validated['workplace'],
-                'salary'        => $validated['salary'],
-                'salary_type'   => $validated['salary_type'],
-                'company'       => $validated['company'],
-                'logo_path'     => $jobLogo,
-                'image'         => $jobBanner,
-                'apply_before'  => $validated['apply_before'],
-                'video_path'    => $jobVideo,
-                'key_points'    => $validated['key_points'] ?? null,
-                'package_id'    => $validated['package_id'],
-                'is_published'  => true,
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? 'Draft description',
+                'location' => $validated['location'] ?? 'TBD',
+                'classification' => $validated['classification'] ?? 'General',
+                'work_type' => $validated['work_type'] ?? 'Full Time',
+                'workplace' => $validated['workplace'] ?? 'Remote',
+                'salary' => $validated['salary'] ?? 'TBD',
+                'salary_type' => $validated['salary_type'] ?? 'Annual',
+                'company' => $validated['company'] ?? 'TBD',
+                'apply_before' => $validated['apply_before'] ?? now()->addDays(30)->toDateString(),
+                'package_id' => $validated['package_id'],
+                'is_published' => $isFree, // Free job auto-published
+                'status' => $isFree ? 'published' : 'pending_payment',
+                'employer_id' => $user->id,
+                'logo_path' => $logoPath,   // ✅ Save logo path
+                'image' => $imagePath,      // ✅ Save banner path
             ]);
+
+            // Free package → auto-create transaction
+            if ($isFree) {
+                Transaction::create([
+                    'user_id' => $user->id,
+                    'job_id' => $job->id,
+                    'package_id' => $validated['package_id'],
+                    'amount' => 0,
+                    'currency' => 'usd',
+                    'status' => 'succeeded',
+                    'stripe_payment_id' => null,
+                    'job_posted' => true,
+                ]);
+            }
 
             return response()->json([
-                'message' => 'Draft job created successfully.',
+                'message' => $isFree
+                    ? 'Free job posted successfully.'
+                    : 'Draft job created. Proceed to payment.',
                 'job_id' => $job->id,
                 'package_id' => $validated['package_id'],
             ], 201);
 
-        } catch (ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
+        } catch (ValidationException $ve) {
+            return response()->json(['errors' => $ve->errors()], 422);
         } catch (\Exception $e) {
-            Log::error('Error creating job:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
+            Log::error('Error creating job: '.$e->getMessage());
             return response()->json(['error' => 'Unexpected error occurred while creating the job.'], 500);
         }
     }
 
-    /**
-     * Display a listing of jobs (public view).
-     */
-   
-  public function index(Request $request)
+
+    public function index(Request $request)
     {
         $query = Job::where('is_published', true);
 
@@ -150,30 +169,7 @@ class JobController extends Controller
         return response()->json($jobs);
     }
 
-
-    
-     
-    public function show(Job $job, Request $request)
-    {
-        $job->load('employer.profile');
-
-        try {
-            return response()->json($this->processJobForFrontend($job));
-        } catch (\Throwable $th) {
-            Log::error('Error processing job for frontend in show method:', [
-                'job_id' => $job->id ?? 'N/A',
-                'error_message' => $th->getMessage(),
-                'file' => $th->getFile(),
-                'line' => $th->getLine(),
-            ]);
-            return response()->json(['error' => 'Failed to process job details.'], 500);
-        }
-    }
-
-    /**
-     * Process job data for consistent frontend output.
-     */
-    private function processJobForFrontend($job)
+   private function processJobForFrontend($job)
     {
         $appUrl = Config::get('app.url');
         $employer = $job->employer;
@@ -238,7 +234,7 @@ class JobController extends Controller
             'logo'          => $companyLogo,
             'image'         => $bannerImage,
             'apply_before_raw' => $job->apply_before,
-            'video_path'    => $job->video_path ? Storage::url($job->video_path) : null,
+            'video_url'     => $job->video_url,
             'key_points'    => $keyPoints,
             'is_published'  => $job->is_published,
             'created_at_raw'=> $job->created_at,
@@ -249,27 +245,55 @@ class JobController extends Controller
         ];
     }
 
-    /**
-     * Get jobs posted by the authenticated employer.
+     /**
+     * Featured Employers — unified logo logic
      */
-    public function getEmployerJobs(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user || $user->role !== 'employer') {
-            return response()->json(['error' => 'Unauthorized.'], 403);
-        }
-
-        $jobs = Job::where('employer_id', $user->id)
-            ->latest()
+   public function featuredEmployers()
+{
+    try {
+        // Get published jobs that have successful paid transactions
+        $jobs = Job::where('is_published', true)
+            ->whereHas('transactions', function ($q) {
+                $q->where('job_posted', true)
+                  ->where('amount', '>', 0)
+                  ->where('status', 'succeeded');
+            })
             ->with('employer.profile')
+            ->select('id', 'company', 'logo_path', 'employer_id')
             ->get()
-            ->map(fn($job) => $this->processJobForFrontend($job));
+            ->unique('company'); // Remove duplicate companies
+
+        $data = $jobs->map(function ($job) {
+            $employer = $job->employer;
+            $profile  = $employer ? $employer->profile : null;
+
+            // Absolute logo URL
+            if ($job->logo_path) {
+                $companyLogo = asset('storage/' . $job->logo_path);
+            } elseif ($profile?->logo_url) {
+                $companyLogo = asset('storage/' . $profile->logo_url);
+            } else {
+                $companyLogo = asset('images/default-company-logo.png');
+            }
+
+            return [
+                'companyName' => $job->company,
+                'logoUrl'     => $companyLogo,
+            ];
+        })->values(); // Reset keys
 
         return response()->json([
-            'message' => 'Employer jobs fetched successfully.',
-            'jobs'    => $jobs
+            'message'   => 'Featured employers fetched successfully.',
+            'employers' => $data
         ]);
+    } catch (\Throwable $e) {
+        Log::error('Featured employers fetch error: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Failed to fetch featured employers.'
+        ], 500);
     }
+}
+
 
     /**
      * Update the specified job.
@@ -372,36 +396,7 @@ class JobController extends Controller
     }
 
 
-    public function featuredEmployers()
-    {
-        try {
-            // Fetch distinct companies from paid jobs
-            $jobs = Job::where('is_published', true)
-                ->whereHas('transactions', function($q) {
-                    $q->where('job_posted', true)
-                      ->where('amount', '>', 0)
-                      ->where('status', 'succeeded');
-                })
-                ->select('company', 'logo_path')
-                ->distinct('company')
-                ->get();
-
-            $data = $jobs->map(function($job) {
-                return [
-                    'companyName' => $job->company,
-                    'logoUrl' => $job->logo_path ? asset('storage/'.$job->logo_path) : asset('images/default-company-logo.png')
-                ];
-            });
-
-            return response()->json([
-                'message' => 'Featured employers fetched successfully.',
-                'employers' => $data
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Featured employers fetch error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch featured employers.'], 500);
-        }
-    }
+    
 
    public function categoriesWithCount()
     {
@@ -439,29 +434,35 @@ class JobController extends Controller
     }
 
 
-   public function paidJObs(Request $request)
-    {
-        try {
-            $jobs = Job::where('is_published', true)
-                ->whereHas('transactions', function ($q) {
-                    $q->where('job_posted', true)
-                    ->where('amount', '>', 0)
-                    ->where('status', 'succeeded');
-                })
-                ->with(['employer.profile', 'transactions'])
-                ->orderBy('created_at', 'desc')
-                ->get()
-                ->map(fn($job) => $this->processJobForFrontend($job));
+   public function paidJobs(Request $request)
+{
+    try {
+        $jobs = Job::where('is_published', true)
+            ->whereHas('transactions', function ($q) {
+                $q->where('job_posted', true)
+                  ->where('amount', '>', 0)
+                  ->where('status', 'succeeded');
+            })
+            ->with(['employer.profile', 'transactions'])
+            // Order by the highest transaction amount
+            ->withSum(['transactions as max_amount' => function ($q) {
+                $q->where('job_posted', true)
+                  ->where('status', 'succeeded');
+            }], 'amount')
+            ->get()
+            ->sortByDesc('max_amount') // Sort descending by amount
+            ->values()
+            ->map(fn($job) => $this->processJobForFrontend($job));
 
-            return response()->json([
-                'message' => 'Featured paid jobs fetched successfully.',
-                'jobs' => $jobs
-            ]);
-        } catch (\Throwable $e) {
-            Log::error('Featured jobs fetch error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch featured jobs.'], 500);
-        }
+        return response()->json([
+            'message' => 'Featured paid jobs fetched successfully.',
+            'jobs' => $jobs
+        ]);
+    } catch (\Throwable $e) {
+        Log::error('Featured jobs fetch error: ' . $e->getMessage());
+        return response()->json(['error' => 'Failed to fetch featured jobs.'], 500);
     }
+}
 
 
 

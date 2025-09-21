@@ -34,23 +34,25 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
   const [selected, setSelected] = useState(initialData.package || "Premium");
   const [featureList, setFeatureList] = useState([]);
 
-  // Fetch subscription plans
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const res = await api.get("/subscription-plans");
-        const plansData = res.data.data || [];
+        let plansData = res.data.data || [];
 
+        // Ensure packages are in correct order
         plansData.sort(
           (a, b) => packageOrder.indexOf(a.name) - packageOrder.indexOf(b.name)
         );
 
+        // Collect all feature keys from API
         const allFeatures = new Set();
         plansData.forEach((pkg) => {
           const features = pkg.features || {};
           Object.keys(features).forEach((key) => allFeatures.add(key));
         });
 
+        // Fix feature order
         const featuresArray = staticFeatureOrder
           .filter((key) => allFeatures.has(key))
           .map((key) => ({
@@ -62,66 +64,22 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
 
         setPackages(plansData);
         setFeatureList(featuresArray);
-
         if (!selected && plansData.length > 0) setSelected(plansData[0].name);
       } catch (err) {
         console.error("Error fetching subscription plans:", err);
-        alert("Failed to fetch subscription plans. Check console.");
       }
     };
 
     fetchPlans();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const selectedPackageObj = packages.find((pkg) => pkg.name === selected);
-    const token = localStorage.getItem("token");
+  const handleSubmit = (e) => {
+  e.preventDefault();
+  // Find the selected package object
+  const selectedPackageObj = packages.find(pkg => pkg.name === selected);
+  onNext({ packageData: selectedPackageObj });
+};
 
-    if (!token) {
-      alert("You must be logged in to create a job.");
-      return;
-    }
-
-    try {
-      // Always create a job (draft or pending payment)
-      const jobRes = await api.post("/jobs", {
-        title: "Draft Job",
-        description: "Draft description",
-        location: "TBD",
-        classification: "General",
-        work_type: "Full Time",
-        workplace: "Remote",
-        salary: "TBD",
-        salary_type: "Annual",
-        company: "TBD",
-        apply_before: new Date().toISOString().split("T")[0],
-        package_id: selectedPackageObj.id,
-        status: selectedPackageObj.price > 0 ? "pending_payment" : "draft",
-      });
-
-      const jobId = jobRes.data.job?.id || jobRes.data.job_id;
-
-      if (selectedPackageObj.price <= 0) {
-        // Free package: confirm immediately
-        await api.post("/confirm-free-package", {
-          job_id: jobId,
-          package_id: selectedPackageObj.id,
-        });
-      }
-
-      // Pass job and package info to next step
-      onNext({ packageData: selectedPackageObj, id: jobId });
-    } catch (err) {
-      console.error("Error creating job:", err.response?.data || err.message);
-
-      if (err.response?.status === 401) {
-        alert("You are not authenticated. Please log in again.");
-      } else {
-        alert("Failed to create job. Check console for details.");
-      }
-    }
-  };
 
   const renderFeatureIcon = (value, key, pkg) => {
     if (value === true || value === "true" || value === 1) {
@@ -130,7 +88,11 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
       return <FaTimesCircle className="inline mr-2 text-red-400" />;
     } else if (key.toLowerCase().includes("duration")) {
       const days = pkg.features.dayDuration || value;
-      return <span className="inline mr-2 text-gray-600">⏱ {days}</span>;
+      return (
+        <span className="inline mr-2 text-gray-600">
+          ⏱ {days}
+        </span>
+      );
     } else {
       return null;
     }
@@ -138,7 +100,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Package Cards */}
+      {/* Packages Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {packages.map((pkg) => (
           <div
@@ -180,7 +142,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
         ))}
       </div>
 
-      {/* Feature Comparison Table */}
+      {/* Comparison Table */}
       <div className="overflow-x-auto bg-white rounded-xl shadow-md">
         <table className="w-full table-auto border-collapse text-sm">
           <thead>
@@ -211,7 +173,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
         </table>
       </div>
 
-      {/* Navigation Buttons */}
+      {/* Navigation */}
       <div className="flex justify-between mt-8">
         <button
           type="button"

@@ -115,7 +115,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']); // Paid package
     Route::post('/confirm-payment', [StripeController::class, 'confirmPayment']); // Confirm paid
      // Free package
-    Route::post('/confirm-free-package', [StripeController::class, 'confirmFreePackage']);
+    //Route::post('/confirm-free-package', [StripeController::class, 'confirmFreePackage']);
 
     // ---------------- Jobs ----------------
     Route::post('/jobs', [JobController::class, 'store']); // Create job draft

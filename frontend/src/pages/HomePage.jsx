@@ -18,14 +18,16 @@ const HomePage = () => {
   const [loadingEmployers, setLoadingEmployers] = useState(true);
   const [errorEmployers, setErrorEmployers] = useState(null);
 
-  // Fetch categories with job counts from backend
+  // Fetch categories with job counts
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await api.get("/categories-with-count");
-        setCategoriesWithCount(res.data.categories);
+        const cats = Array.isArray(res.data.categories) ? res.data.categories : [];
+        setCategoriesWithCount(cats);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
+        setCategoriesWithCount([]); // fallback
       }
     };
     fetchCategories();
@@ -36,10 +38,12 @@ const HomePage = () => {
     const fetchFeaturedEmployers = async () => {
       try {
         const res = await api.get("/employers/featured");
-        setFeaturedEmployers(res.data.employers);
+        const employers = Array.isArray(res.data.employers) ? res.data.employers : [];
+        setFeaturedEmployers(employers);
       } catch (err) {
         console.error(err);
         setErrorEmployers("Failed to load featured employers.");
+        setFeaturedEmployers([]);
       } finally {
         setLoadingEmployers(false);
       }
@@ -64,15 +68,25 @@ const HomePage = () => {
           <div className="relative">
             <div className="-mx-6 px-6 overflow-visible">
               <Slider
-                slides={categoriesWithCount}
+                slides={Array.isArray(categoriesWithCount) ? categoriesWithCount : []}
                 renderSlide={(cat) => (
-                  <CategoryCard key={cat.classification} title={cat.classification} count={cat.count} />
+                  <CategoryCard
+                    key={cat.classification || Math.random()}
+                    title={cat.classification || "Unknown"}
+                    count={cat.count || 0}
+                  />
                 )}
                 navigation={{ nextEl: ".category-swiper-next", prevEl: ".category-swiper-prev" }}
                 slidesPerView={2}
-                breakpoints={{ 640: { slidesPerView: 2 }, 768: { slidesPerView: 3 }, 1024: { slidesPerView: 4 } }}
+                breakpoints={{
+                  640: { slidesPerView: 2 },
+                  768: { slidesPerView: 3 },
+                  1024: { slidesPerView: 4 },
+                }}
               />
             </div>
+
+            {/* Category Slider Arrows */}
             <div className="category-swiper-prev absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white border border-gray-300 shadow flex items-center justify-center cursor-pointer text-[#003893] hover:bg-[#003893] hover:text-white transition">
               <MdArrowBackIos size={18} />
             </div>
@@ -96,18 +110,30 @@ const HomePage = () => {
             <div className="relative">
               <div className="-mx-6 px-6 overflow-visible">
                 <Slider
-                  slides={featuredEmployers}
+                  slides={Array.isArray(featuredEmployers) ? featuredEmployers : []}
                   renderSlide={(employer) => (
                     <EmployerCard
-                      key={employer.companyName}
-                      companyName={employer.companyName}
-                      logoUrl={employer.logoUrl}
+                      key={employer.companyName || Math.random()}
+                      companyName={employer.companyName || "Unknown"}
+                      logoUrl={employer.logoUrl || "/images/default-company-logo.png"}
                     />
                   )}
                   navigation={{ nextEl: ".employer-swiper-next", prevEl: ".employer-swiper-prev" }}
                   slidesPerView={1}
-                  breakpoints={{ 640: { slidesPerView: 1 }, 768: { slidesPerView: 3 }, 1024: { slidesPerView: 5 } }}
+                  breakpoints={{
+                    640: { slidesPerView: 1 },
+                    768: { slidesPerView: 3 },
+                    1024: { slidesPerView: 5 },
+                  }}
                 />
+              </div>
+
+              {/* Employer Slider Arrows */}
+              <div className="employer-swiper-prev absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white border border-gray-300 shadow flex items-center justify-center cursor-pointer text-[#003893] hover:bg-[#003893] hover:text-white transition">
+                <MdArrowBackIos size={18} />
+              </div>
+              <div className="employer-swiper-next absolute top-1/2 right-0 translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white border border-gray-300 shadow flex items-center justify-center cursor-pointer text-[#003893] hover:bg-[#003893] hover:text-white transition">
+                <MdArrowForwardIos size={18} />
               </div>
             </div>
           )}
@@ -117,10 +143,22 @@ const HomePage = () => {
         <TabbedSection
           title="Discover Trending Jobs"
           tabs={[
-            { label: "Popular Searches", items: ["IT jobs", "Remote jobs", "Part-time jobs", "Marketing jobs", "Driver jobs", "Teaching jobs"] },
-            { label: "Popular Companies", items: ["Nepal Telecom", "Daraz", "Ncell", "Fusemachines", "CloudFactory", "Leapfrog"] },
-            { label: "Popular Jobs", items: ["Software Engineer", "Accountant", "Civil Engineer", "Delivery Rider", "Data Analyst", "Call Center Agent"] },
-            { label: "Popular Location", items: ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan", "Biratnagar", "Butwal"] },
+            {
+              label: "Popular Searches",
+              items: ["IT jobs", "Remote jobs", "Part-time jobs", "Marketing jobs", "Driver jobs", "Teaching jobs"],
+            },
+            {
+              label: "Popular Companies",
+              items: ["Nepal Telecom", "Daraz", "Ncell", "Fusemachines", "CloudFactory", "Leapfrog"],
+            },
+            {
+              label: "Popular Jobs",
+              items: ["Software Engineer", "Accountant", "Civil Engineer", "Delivery Rider", "Data Analyst", "Call Center Agent"],
+            },
+            {
+              label: "Popular Location",
+              items: ["Kathmandu", "Lalitpur", "Bhaktapur", "Pokhara", "Chitwan", "Biratnagar", "Butwal"],
+            },
           ]}
         />
       </div>

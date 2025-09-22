@@ -1,12 +1,11 @@
 .rich-editor-container {
-  border: 1px solid #ccc;
   border-radius: 8px;
   background: white;
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
+/* Toolbar with only bottom border */
 .editor-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -29,8 +28,24 @@
   background: #eee;
 }
 
+/* Editor content wrapper */
 .editor-wrapper {
   flex: 1;
   padding: 10px;
-  overflow-y: auto;
+  min-height: 200px;         /* full height visible initially */
+  border: 1px solid #ccc;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Tiptap editor content fills wrapper */
+.editor-content {
+  flex: 1;
+  min-height: 200px;         /* ensures full height even when empty */
+  width: 100%;
+  outline: none;             /* remove default focus outline */
 }

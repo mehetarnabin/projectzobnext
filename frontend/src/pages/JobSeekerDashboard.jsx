@@ -8,7 +8,7 @@ import VacancyStats from "../components/Dashboard/VacancyStats";
 import SkillsProficiency from "../components/Dashboard/SkillsProficiency";
 import WorkingType from "../components/Dashboard/WorkingType";
 import AppliedJobs from "../components/Dashboard/AppliedJobs";
-import DocumentHubNew from "../components/Dashboard/DocumentHubNew";
+import DocumentHub from "../components/Dashboard/DocumentHub";
 import ShortlistedCandidate from "../components/Dashboard/ShortlistedCandidate";
 import { useAuth } from "../context/AuthContext";
 
@@ -52,7 +52,7 @@ const JobSeekerDashboard = () => {
           />
           <Route path="/applied-jobs" element={<AppliedJobs />} />
           <Route path="/shortlisted-candidate" element={<ShortlistedCandidate />} />
-          <Route path="/document-hub" element={<DocumentHubNew />} />
+          <Route path="/document-hub" element={<DocumentHub/>} />
         </Routes>
       </main>
     </div>

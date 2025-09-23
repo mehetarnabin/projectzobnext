@@ -14,6 +14,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\StripeController;
+use App\Http\Controllers\DocumentController;
 use App\Models\Job;
 use App\Models\Company;
 use App\Models\User;
@@ -111,6 +112,13 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/licenses', [ProfileController::class, 'updateLicenses']);
     });
 
+
+    Route::get('/documents', [DocumentController::class, 'index']); // supports ?search= & ?category= & ?type=
+    Route::post('/documents', [DocumentController::class, 'store']);
+    Route::patch('/documents/{id}', [DocumentController::class, 'update']);
+    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
+    });
+
     // ---------------- Stripe Payment ----------------
     Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']); // Paid package
     Route::post('/confirm-payment', [StripeController::class, 'confirmPayment']); // Confirm paid
@@ -186,7 +194,6 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/{id}', [EventController::class, 'destroy']);
     });
     
-});
 
 // ==================== Stripe Webhook (must be public) ====================
 Route::post('/stripe/webhook', [StripeController::class, 'handleWebhook']);

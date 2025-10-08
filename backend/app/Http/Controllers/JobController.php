@@ -21,93 +21,123 @@ class JobController extends Controller
      * Employer who is logged in will be the owner.
      */
    public function store(Request $request)
-    {
-        $user = Auth::user();
-        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+{
+    $user = Auth::user();
+    if (!$user) {
+        return response()->json(['message' => 'Unauthorized'], 401);
+    }
 
-        try {
-            $validated = $request->validate([
-                'title' => 'required|string|max:255',
-                'description' => 'nullable|string',
-                'location' => 'nullable|string',
-                'classification' => 'nullable|string',
-                'work_type' => 'nullable|string',
-                'workplace' => 'nullable|string',
-                'salary' => 'nullable|string',
-                'salary_type' => 'nullable|string',
-                'company' => 'nullable|string',
-                'apply_before' => 'nullable|date',
-                'package_id' => 'required|exists:subscription_plans,id',
-                'package_price' => 'required|numeric',
-                'logo' => 'nullable|image|max:2048',   // ✅ Job/company logo
-                'image' => 'nullable|image|max:2048',  // ✅ Job banner image
-            ]);
+    try {
+        // Check for an active subscription
+        $activeSubscription = \App\Models\Subscription::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->where('subscription_end_date', '>=', now())
+            ->first();
 
-            $packagePrice = $validated['package_price'];
-            $isFree = $packagePrice <= 0;
+        // Validation rules
+        $rules = [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'location' => 'nullable|string',
+            'classification' => 'nullable|string',
+            'work_type' => 'nullable|string',
+            'workplace' => 'nullable|string',
+            'salary' => 'nullable|string',
+            'salary_type' => 'nullable|string',
+            'company' => 'nullable|string',
+            'apply_before' => 'nullable|date',
+            'logo' => 'nullable|image|max:2048',   // Job/company logo
+            'image' => 'nullable|image|max:2048',  // Job banner image
+        ];
 
+        // Only require package if no active subscription
+        if (!$activeSubscription) {
+            $rules['package_id'] = 'required|exists:subscription_plans,id';
+            $rules['package_price'] = 'required|numeric';
+        }
 
-            // ✅ Handle logo upload
-            $logoPath = null;
-            if ($request->hasFile('logo')) {
-                $logoPath = $request->file('logo')->store('job-logos', 'public');
+        $validated = $request->validate($rules);
+
+        // If they do have an active subscription, check post limits
+        if ($activeSubscription) {
+            $plan = $activeSubscription->plan;
+            $remainingPosts = $plan->max_posts - $activeSubscription->used_posts;
+
+            if ($remainingPosts <= 0) {
+                return response()->json([
+                    'error' => 'You have used all your available job posts for this subscription.'
+                ], 403);
             }
+        }
 
-            // ✅ Handle banner upload
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('job-banners', 'public');
-            }
+        // Handle file uploads
+        $logoPath = $request->hasFile('logo') ? $request->file('logo')->store('job-logos', 'public') : null;
+        $imagePath = $request->hasFile('image') ? $request->file('image')->store('job-banners', 'public') : null;
 
-            // Create job
-            $job = Job::create([
-                'title' => $validated['title'],
-                'description' => $validated['description'] ?? 'Draft description',
-                'location' => $validated['location'] ?? 'TBD',
-                'classification' => $validated['classification'] ?? 'General',
-                'work_type' => $validated['work_type'] ?? 'Full Time',
-                'workplace' => $validated['workplace'] ?? 'Remote',
-                'salary' => $validated['salary'] ?? 'TBD',
-                'salary_type' => $validated['salary_type'] ?? 'Annual',
-                'company' => $validated['company'] ?? 'TBD',
-                'apply_before' => $validated['apply_before'] ?? now()->addDays(30)->toDateString(),
-                'package_id' => $validated['package_id'],
-                'is_published' => $isFree, // Free job auto-published
-                'status' => $isFree ? 'published' : 'pending_payment',
-                'employer_id' => $user->id,
-                'logo_path' => $logoPath,   // ✅ Save logo path
-                'image' => $imagePath,      // ✅ Save banner path
-            ]);
+        // Determine package info
+        $packageId = $activeSubscription->subscription_plan_id ?? ($validated['package_id'] ?? null);
+        $isFree = $activeSubscription || ($validated['package_price'] ?? 0) <= 0;
 
-            // Free package → auto-create transaction
-            if ($isFree) {
-                Transaction::create([
-                    'user_id' => $user->id,
-                    'job_id' => $job->id,
-                    'package_id' => $validated['package_id'],
-                    'amount' => 0,
-                    'currency' => 'usd',
-                    'status' => 'succeeded',
-                    'stripe_payment_id' => null,
-                    'job_posted' => true,
-                ]);
-            }
+        // Create job
+        $job = \App\Models\Job::create([
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? 'Draft description',
+            'location' => $validated['location'] ?? 'TBD',
+            'classification' => $validated['classification'] ?? 'General',
+            'work_type' => $validated['work_type'] ?? 'Full Time',
+            'workplace' => $validated['workplace'] ?? 'Remote',
+            'salary' => $validated['salary'] ?? 'TBD',
+            'salary_type' => $validated['salary_type'] ?? 'Annual',
+            'company' => $validated['company'] ?? 'TBD',
+            'apply_before' => $validated['apply_before'] ?? now()->addDays(30),
+            'package_id' => $packageId,
+            'is_published' => true,
+            'status' => 'published',
+            'employer_id' => $user->id,
+            'logo_path' => $logoPath,
+            'image' => $imagePath,
+        ]);
 
-            return response()->json([
-                'message' => $isFree
-                    ? 'Free job posted successfully.'
-                    : 'Draft job created. Proceed to payment.',
+        // Update used posts count if using a subscription
+        if ($activeSubscription) {
+            $activeSubscription->increment('used_posts');
+        } else {
+            // New subscription purchase logic
+            \App\Models\Transaction::create([
+                'user_id' => $user->id,
                 'job_id' => $job->id,
                 'package_id' => $validated['package_id'],
-            ], 201);
+                'amount' => $validated['package_price'],
+                'currency' => 'usd',
+                'status' => 'succeeded',
+                'job_posted' => true,
+            ]);
 
-        } catch (ValidationException $ve) {
-            return response()->json(['errors' => $ve->errors()], 422);
-        } catch (\Exception $e) {
-            Log::error('Error creating job: '.$e->getMessage());
-            return response()->json(['error' => 'Unexpected error occurred while creating the job.'], 500);
+            \App\Models\Subscription::create([
+                'user_id' => $user->id,
+                'subscription_plan_id' => $validated['package_id'],
+                'plan_type' => 'employer',
+                'subscription_end_date' => now()->addMonth(),
+                'status' => 'active',
+                'used_posts' => 1, // first post used
+                'notified_before_end' => false,
+            ]);
         }
+        
+        return response()->json([
+            'message' => 'Job posted successfully.',
+            'job_id' => $job->id,
+            'package_id' => $job->package_id,
+        ], 201);
+
+    } catch (\Illuminate\Validation\ValidationException $ve) {
+        return response()->json(['errors' => $ve->errors()], 422);
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error('Error creating job: '.$e->getMessage());
+        return response()->json(['error' => 'Unexpected error occurred while creating the job.'], 500);
     }
+}
+
 
 
     public function index(Request $request)

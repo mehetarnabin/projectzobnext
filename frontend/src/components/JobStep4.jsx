@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; 
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { FaShieldAlt } from "react-icons/fa";
 import api from "../api/axios";
@@ -21,7 +21,6 @@ const JobStep4 = ({ formData = {}, draftJobId, setDraftJobId, onBack, onComplete
   const packagePrice = Number(selectedPackage.price || 0);
   const isFreePackage = packagePrice <= 0;
 
-  // Recover draftJobId from localStorage if missing
   useEffect(() => {
     if (!localJobId) {
       const storedId = localStorage.getItem("draftJobId");
@@ -44,44 +43,62 @@ const JobStep4 = ({ formData = {}, draftJobId, setDraftJobId, onBack, onComplete
 
       let jobId = localJobId;
 
-      // 1️⃣ Create draft job only if it doesn't exist
-  if (!jobId) {
-    const fd = new FormData();
+      // 🔹 Check for active subscription
+      const { data } = await api.get("active-subscription", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const activeSub = data.data;
 
-    // Append all basic job fields
-    fd.append("title", formData.title || "");
-    fd.append("description", formData.description || "");
-    fd.append("location", formData.location || "");
-    fd.append("company", formData.company || "");
-    fd.append("package_id", selectedPackage.id);
-    fd.append("package_price", packagePrice);
+      // Prepare FormData with defaults
+      const fd = new FormData();
+      fd.append("title", formData.title || "Job Title");
+      fd.append("description", formData.description || "Job Description");
+      fd.append("location", formData.location || "TBD");
+      fd.append("classification", formData.classification || "General");
+      fd.append("work_type", formData.work_type || "Full Time");
+      fd.append("workplace", formData.workplace || "Remote");
+      fd.append("salary", formData.salary || "TBD");
+      fd.append("salary_type", formData.salary_type || "Annual");
+      fd.append("company", formData.company || "TBD");
+      fd.append("apply_before", formData.apply_before || new Date().toISOString().slice(0, 10));
 
-    // Append files if present
-    if (formData.logo) fd.append("logo", formData.logo);
-    if (formData.image) fd.append("image", formData.image);
+      if (formData.logo instanceof File) fd.append("logo", formData.logo);
+      if (formData.image instanceof File) fd.append("image", formData.image);
 
-    const { data: draft } = await api.post("/jobs", fd, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "multipart/form-data",
-      },
-    });
+      // If employer has active subscription with remaining posts
+      if (activeSub && activeSub.status === "active" && activeSub.remaining_posts > 0) {
+        fd.append("subscription_id", activeSub.id);
 
-    jobId = draft.job_id;
-    setLocalJobId(jobId);
-    setDraftJobId(jobId);
-    localStorage.setItem("draftJobId", jobId);
-  }
+        const { data: resp } = await api.post("/jobs", fd, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        });
 
-      // 2️⃣ Free package → already published
-      if (isFreePackage) {
-        localStorage.removeItem("draftJobId");
-        setDraftJobId(null);
-        onComplete(); // just navigate, no extra API call
+        onComplete(); // Job posted without payment
         return;
       }
 
-      // 3️⃣ Paid package → Stripe PaymentIntent
+      // ❌ No active subscription → follow payment flow
+      if (!jobId) {
+        fd.append("package_id", selectedPackage.id);
+        fd.append("package_price", packagePrice);
+
+        const { data: draft } = await api.post("/jobs", fd, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+        });
+
+        jobId = draft.job_id;
+        setLocalJobId(jobId);
+        setDraftJobId(jobId);
+        localStorage.setItem("draftJobId", jobId);
+      }
+
+      if (isFreePackage) {
+        localStorage.removeItem("draftJobId");
+        setDraftJobId(null);
+        onComplete();
+        return;
+      }
+
       if (!stripe || !elements) throw new Error("Stripe is not loaded.");
 
       const { data: intentData } = await api.post(
@@ -101,7 +118,6 @@ const JobStep4 = ({ formData = {}, draftJobId, setDraftJobId, onBack, onComplete
       if (stripeError) throw new Error(stripeError.message);
 
       if (paymentIntent.status === "succeeded") {
-        // Confirm payment on backend
         await api.post(
           "/confirm-payment",
           { payment_intent_id: paymentIntent.id },
@@ -110,13 +126,13 @@ const JobStep4 = ({ formData = {}, draftJobId, setDraftJobId, onBack, onComplete
 
         localStorage.removeItem("draftJobId");
         setDraftJobId(null);
-        onComplete(); // just navigate, no extra creation
+        onComplete();
       } else {
         setError("Payment not completed. Check with your bank.");
       }
     } catch (err) {
       console.error("Payment Error:", err);
-      setError(err.response?.data?.message || err.message);
+      setError(err.response?.data?.message || JSON.stringify(err.response?.data?.errors) || err.message);
     } finally {
       setLoading(false);
     }

@@ -33,26 +33,80 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
   const [packages, setPackages] = useState([]);
   const [selected, setSelected] = useState(initialData.package || "Premium");
   const [featureList, setFeatureList] = useState([]);
+  const [skipSelection, setSkipSelection] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // ✅ Check for active subscription
+  useEffect(() => {
+    const checkActiveSubscription = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.warn("No token found. User not logged in.");
+          return setLoading(false);
+        }
+
+        const { data } = await api.get("/active-subscription", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        console.log("Active subscription API response:", data);
+
+        if (!data) {
+          console.warn("No data returned from subscription API.");
+          return setLoading(false);
+        }
+
+        const activeSub = data.subscription || null;
+
+        if (!activeSub) {
+          console.warn("No active subscription found.");
+          return setLoading(false);
+        }
+
+        // Check all conditions to skip Step 2
+        if (data.active === true && activeSub.remaining_posts > 0) {
+          console.log(
+            "Active subscription found. Skipping package selection.",
+            activeSub
+          );
+          setSkipSelection(true);
+          onNext({ packageData: activeSub }); // move to next step
+        } else {
+          console.log(
+            "Subscription found but conditions not met:",
+            "Active:", data.active,
+            "Remaining posts:", activeSub.remaining_posts
+          );
+        }
+      } catch (err) {
+        console.error("Error checking active subscription:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkActiveSubscription();
+  }, [onNext]);
+
+  // Fetch available subscription plans
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const res = await api.get("/subscription-plans");
         let plansData = res.data.data || [];
 
-        // Ensure packages are in correct order
+        // Sort packages in custom order
         plansData.sort(
           (a, b) => packageOrder.indexOf(a.name) - packageOrder.indexOf(b.name)
         );
 
-        // Collect all feature keys from API
         const allFeatures = new Set();
         plansData.forEach((pkg) => {
           const features = pkg.features || {};
           Object.keys(features).forEach((key) => allFeatures.add(key));
         });
 
-        // Fix feature order
         const featuresArray = staticFeatureOrder
           .filter((key) => allFeatures.has(key))
           .map((key) => ({
@@ -71,15 +125,13 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
     };
 
     fetchPlans();
-  }, []);
+  }, [selected]);
 
   const handleSubmit = (e) => {
-  e.preventDefault();
-  // Find the selected package object
-  const selectedPackageObj = packages.find(pkg => pkg.name === selected);
-  onNext({ packageData: selectedPackageObj });
-};
-
+    e.preventDefault();
+    const selectedPackageObj = packages.find((pkg) => pkg.name === selected);
+    onNext({ packageData: selectedPackageObj });
+  };
 
   const renderFeatureIcon = (value, key, pkg) => {
     if (value === true || value === "true" || value === 1) {
@@ -88,15 +140,28 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
       return <FaTimesCircle className="inline mr-2 text-red-400" />;
     } else if (key.toLowerCase().includes("duration")) {
       const days = pkg.features.dayDuration || value;
-      return (
-        <span className="inline mr-2 text-gray-600">
-          ⏱ {days}
-        </span>
-      );
-    } else {
-      return null;
+      return <span className="inline mr-2 text-gray-600">⏱ {days}</span>;
     }
+    return null;
   };
+
+  if (loading) {
+    return (
+      <div className="p-6 bg-white rounded-xl shadow-md">
+        <p className="text-gray-600">Checking your subscription...</p>
+      </div>
+    );
+  }
+
+  if (skipSelection) {
+    return (
+      <div className="p-6 bg-white rounded-xl shadow-md">
+        <p className="text-gray-600">
+          You already have an active subscription. Skipping package selection...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
@@ -130,11 +195,7 @@ const JobStep2 = ({ onNext, onBack, initialData }) => {
               {featureList.slice(0, 4).map((feat) => (
                 <li key={feat.key}>
                   {renderFeatureIcon(pkg.features[feat.key], feat.key, pkg)}
-                  {feat.label}:{" "}
-                  {typeof pkg.features[feat.key] === "string" &&
-                  feat.key.toLowerCase() !== "duration"
-                    ? pkg.features[feat.key]
-                    : ""}
+                  {feat.key.toLowerCase() !== "duration" && pkg.features[feat.key]}
                 </li>
               ))}
             </ul>

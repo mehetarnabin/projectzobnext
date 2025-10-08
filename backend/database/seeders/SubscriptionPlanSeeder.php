@@ -28,6 +28,7 @@ class SubscriptionPlanSeeder extends Seeder
                     'support' => 'Standard',
                 ]),
                 'recommended' => false,
+                'max_posts' => 1,
             ],
             [
                 'plan_type' => 'employer',
@@ -46,6 +47,7 @@ class SubscriptionPlanSeeder extends Seeder
                     'support' => 'Standard',
                 ]),
                 'recommended' => false,
+                'max_posts' => 5,
             ],
             [
                 'plan_type' => 'employer',
@@ -64,6 +66,7 @@ class SubscriptionPlanSeeder extends Seeder
                     'support' => 'Priority',
                 ]),
                 'recommended' => true,
+                'max_posts' => 10,
             ],
             [
                 'plan_type' => 'employer',
@@ -82,6 +85,7 @@ class SubscriptionPlanSeeder extends Seeder
                     'support' => 'Dedicated Manager',
                 ]),
                 'recommended' => false,
+                'max_posts' => 20,
             ],
         ]);
 

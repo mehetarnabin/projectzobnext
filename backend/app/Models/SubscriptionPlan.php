@@ -16,6 +16,7 @@ class SubscriptionPlan extends Model
         'description',
         'features',
         'recommended',
+        'max_posts'
     ];
 
     protected $casts = [

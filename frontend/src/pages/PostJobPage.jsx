@@ -18,14 +18,26 @@ const PostJobPage = () => {
   const handleNext = (data) => {
     if (!(data instanceof Event)) {
       setFormData((prev) => ({ ...prev, ...data }));
-      setStep((prev) => prev + 1);
+
+      // If Step 2 is skipped due to active subscription, jump to Step 3
+      if (step === 1 && data.packageData && data.packageData.remaining_posts >= 0) {
+        setStep(3);
+      } else {
+        setStep((prev) => prev + 1);
+      }
     }
   };
 
-  const handleBack = () => setStep((prev) => prev - 1);
+  const handleBack = () => {
+    // If Step 2 was skipped, going back from Step 3 should go to Step 1
+    if (step === 3 && formData.packageData && formData.packageData.remaining_posts >= 0) {
+      setStep(1);
+    } else {
+      setStep((prev) => prev - 1);
+    }
+  };
 
   const handleComplete = () => {
-    // ✅ Job already created/published in Step4
     alert("✅ Job posted successfully!");
     navigate("/employer/dashboard");
   };
@@ -37,7 +49,9 @@ const PostJobPage = () => {
         <div className="mb-6 text-sm text-gray-600">Step {step} of 4</div>
 
         {step === 1 && <JobStep1 onNext={handleNext} initialData={formData} />}
-        {step === 2 && <JobStep2 onNext={handleNext} onBack={handleBack} initialData={formData} />}
+        {step === 2 && (
+          <JobStep2 onNext={handleNext} onBack={handleBack} initialData={formData} />
+        )}
         {step === 3 && <JobStep3 formData={formData} onNext={handleNext} onBack={handleBack} />}
         {step === 4 && (
           <Elements stripe={stripePromise}>

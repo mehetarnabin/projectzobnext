@@ -16,6 +16,7 @@ class Subscription extends Model
         'subscription_end_date',
         'status',
         'notified_before_end',
+        'used_posts',
     ];
 
     protected $casts = [
@@ -30,6 +31,10 @@ class Subscription extends Model
 
     public function plan()
     {
-        return $this->belongsTo(SubscriptionPlan::class, 'subscription_plan_id');
+       
+
+    return $this->belongsTo(\App\Models\SubscriptionPlan::class, 'subscription_plan_id');
+
+
     }
 }

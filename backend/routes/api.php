@@ -1,3 +1,4 @@
+
 <?php
 
 use Illuminate\Http\Request;
@@ -14,7 +15,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SubscriptionPlanController;
 use App\Http\Controllers\StripeController;
-use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\SubscriptionController;
 use App\Models\Job;
 use App\Models\Company;
 use App\Models\User;
@@ -85,8 +86,6 @@ Route::get('/jobs/search', [JobController::class, 'search']);
 Route::get('/events', [EventController::class, 'index']);
 Route::get('/events/{slug}', [EventController::class, 'showBySlug']); 
 
-// Public subscription plans
-Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
 
 // Contact form
 Route::post('/contact', [ContactController::class, 'store']);
@@ -112,24 +111,24 @@ Route::middleware('auth:api')->group(function () {
         Route::post('/licenses', [ProfileController::class, 'updateLicenses']);
     });
 
-
-    Route::get('/documents', [DocumentController::class, 'index']); // supports ?search= & ?category= & ?type=
-    Route::post('/documents', [DocumentController::class, 'store']);
-    Route::patch('/documents/{id}', [DocumentController::class, 'update']);
-    Route::delete('/documents/{id}', [DocumentController::class, 'destroy']);
-    });
-
     // ---------------- Stripe Payment ----------------
     Route::post('/create-payment-intent', [StripeController::class, 'createPaymentIntent']); // Paid package
     Route::post('/confirm-payment', [StripeController::class, 'confirmPayment']); // Confirm paid
      // Free package
-    //Route::post('/confirm-free-package', [StripeController::class, 'confirmFreePackage']);
+    Route::post('/confirm-free-package', [StripeController::class, 'confirmFreePackage']);
+
+
+    // Public subscription plans
+    Route::get('/subscription-plans', [SubscriptionPlanController::class, 'index']);
+    Route::get('/active-subscription', [SubscriptionController::class, 'active']);
+
 
     // ---------------- Jobs ----------------
     Route::post('/jobs', [JobController::class, 'store']); // Create job draft
     Route::put('/jobs/{job}', [JobController::class, 'update']); // Update draft/published job
     Route::delete('/jobs/{job}', [JobController::class, 'destroy']); // Delete job
     Route::get('/employer/jobs', [JobController::class, 'getEmployerJobs']); // List employer jobs
+
 
     // ---------------- Job Applications ----------------
     Route::prefix('applications')->group(function () {
@@ -194,6 +193,7 @@ Route::middleware('auth:api')->group(function () {
         Route::delete('/{id}', [EventController::class, 'destroy']);
     });
     
+});
 
 // ==================== Stripe Webhook (must be public) ====================
 Route::post('/stripe/webhook', [StripeController::class, 'handleWebhook']);

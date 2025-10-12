@@ -192,6 +192,30 @@ Route::middleware('auth:api')->group(function () {
         Route::put('/{id}', [EventController::class, 'update']);
         Route::delete('/{id}', [EventController::class, 'destroy']);
     });
+
+
+    // Fetch employer notifications
+    Route::get('/notifications', function (Request $request) {
+        $user = $request->user();
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        // Return the latest 10 notifications
+        $notifications = $user->notifications()->orderBy('created_at', 'desc')->take(10)->get();
+
+        return response()->json($notifications);
+    });
+
+    // Mark all unread notifications as read
+    Route::post('/notifications/mark-read', function (Request $request) {
+        $user = $request->user();
+        if (!$user) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $user->unreadNotifications->markAsRead();
+
+        return response()->json(['status' => 'success']);
+    });
+
+
     
 });
 
@@ -207,5 +231,25 @@ Route::prefix('admin')->group(function () {
         Route::post('/subscription-plans', [SubscriptionPlanController::class, 'store']);
         Route::put('/subscription-plans/{id}', [SubscriptionPlanController::class, 'update']);
         Route::delete('/subscription-plans/{id}', [SubscriptionPlanController::class, 'destroy']);
+        Route::get('/users-with-packages', [AdminController::class, 'usersWithPackages']);
+
     });
+
+        // Fetch latest 10 admin notifications
+    Route::get('/notifications', function (Request $request) {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $notifications = $admin->notifications()->orderBy('created_at', 'desc')->take(10)->get();
+        return response()->json($notifications);
+    });
+
+    Route::post('/notifications/mark-read', function (Request $request) {
+        $admin = Auth::guard('admin')->user();
+        if (!$admin) return response()->json(['message' => 'Unauthorized'], 401);
+
+        $admin->unreadNotifications->markAsRead();
+        return response()->json(['status' => 'success']);
+    });
+
 });

@@ -2,6 +2,9 @@
 import React from "react";
 import AdminSidebar from "../components/AdminDashboard/AdminSidebar";
 import AdminHeader from "../components/AdminDashboard/AdminHeader";
+import PackageActivity from "../components/AdminDashboard/PackageActivity";
+import PackageActivityStatistics from "../components/AdminDashboard/PackageActivityStatistics";
+
 
 
 const AdminDashboard = () => {
@@ -28,6 +31,8 @@ const AdminDashboard = () => {
               You are now logged in as an admin. Manage the system from here.
             </p>
           </div>
+          <PackageActivityStatistics />
+          <PackageActivity />
 
           
           

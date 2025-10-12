@@ -5,9 +5,15 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Admin;
+use App\Models\User;
 use App\Traits\ApiResponseTrait;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Tymon\JWTAuth\Facades\JWTFactory;
+use Illuminate\Support\Facades\Auth;
+
 use Tymon\JWTAuth\Exceptions\JWTException;
+
+use App\Models\Job;
 
 class AdminController extends Controller
 {
@@ -59,7 +65,7 @@ class AdminController extends Controller
         }
 
         // Generate JWT token for admin
-        $token = JWTAuth::fromUser($admin);
+       $token = Auth::guard('admin')->login($admin);
 
         return $this->success([
             'admin' => $admin,
@@ -94,4 +100,46 @@ class AdminController extends Controller
             return $this->error('Token invalid or expired.', 401);
         }
     }
+
+    public function usersWithPackages()
+    {
+        // Get all users with active subscriptions
+        $users = User::with(['subscription.plan'])
+            ->whereHas('subscription', function ($query) {
+                $query->where('status', 'active');
+            })
+            ->get()
+            ->map(function ($user) {
+                $subscription = $user->subscription;
+                $plan = $subscription?->plan;
+
+                // Total posts allowed from the plan
+                $totalPosts = $plan?->max_posts ?? 0;
+
+                // Count jobs posted by this user (employer)
+                $usedPosts = $user->jobs()->count();
+
+                $remainingPosts = max($totalPosts - $usedPosts, 0);
+
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role, // employer or jobseeker
+                    'plan_name' => $plan?->name ?? 'N/A',
+                    'plan_type' => $subscription?->plan_type ?? '-',
+                    'subscription_end_date' => optional($subscription->subscription_end_date)->toDateString(),
+                    'posts_allowed' => $totalPosts,
+                    'posts_used' => $usedPosts,
+                    'posts_left' => $remainingPosts,
+                ];
+            });
+
+        return response()->json($users);
+    }
+
+    
+
+
+
 }

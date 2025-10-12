@@ -6,7 +6,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
-
+/**
+ * @property \Illuminate\Notifications\DatabaseNotificationCollection $notifications
+ * @property \Illuminate\Notifications\DatabaseNotificationCollection $unreadNotifications
+ */
 class Admin extends Authenticatable implements JWTSubject
 {
     use Notifiable;

@@ -44,9 +44,10 @@
     40 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     41 => 'Termwind\\Laravel\\TermwindServiceProvider',
     42 => 'RyanChandler\\BladeCaptureDirective\\BladeCaptureDirectiveServiceProvider',
-    43 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
-    44 => 'App\\Providers\\AppServiceProvider',
-    45 => 'App\\Providers\\Filament\\ZobnextAdminPanelProvider',
+    43 => 'Torann\\GeoIP\\GeoIPServiceProvider',
+    44 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
+    45 => 'App\\Providers\\AppServiceProvider',
+    46 => 'App\\Providers\\Filament\\ZobnextAdminPanelProvider',
   ),
   'eager' => 
   array (
@@ -78,9 +79,10 @@
     25 => 'NunoMaduro\\Collision\\Adapters\\Laravel\\CollisionServiceProvider',
     26 => 'Termwind\\Laravel\\TermwindServiceProvider',
     27 => 'RyanChandler\\BladeCaptureDirective\\BladeCaptureDirectiveServiceProvider',
-    28 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
-    29 => 'App\\Providers\\AppServiceProvider',
-    30 => 'App\\Providers\\Filament\\ZobnextAdminPanelProvider',
+    28 => 'Torann\\GeoIP\\GeoIPServiceProvider',
+    29 => 'Tymon\\JWTAuth\\Providers\\LaravelServiceProvider',
+    30 => 'App\\Providers\\AppServiceProvider',
+    31 => 'App\\Providers\\Filament\\ZobnextAdminPanelProvider',
   ),
   'deferred' => 
   array (

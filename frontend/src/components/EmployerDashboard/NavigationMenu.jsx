@@ -1,30 +1,22 @@
 import React from "react";
 import { Link } from "react-router-dom"; 
 import { 
-  FaSave, 
   FaBriefcase, 
-  FaFileAlt, 
-  FaBook, 
-  FaBuilding,
-  FaCalendarAlt
+  FaGem 
 } from "react-icons/fa";
 import { BsCardChecklist, BsBuildings } from "react-icons/bs";
 import { IoBriefcaseOutline } from "react-icons/io5";
-import { AiOutlineBarChart } from "react-icons/ai";
 import { LuNotebookText } from "react-icons/lu";
-import { FaRegFileLines } from "react-icons/fa6";
 import { SlEvent } from "react-icons/sl";
+import { FaRegFileLines } from "react-icons/fa6";
 
 const NavigationMenu = () => {
   const menuItems = [
     { name: "Post a Job", icon: <IoBriefcaseOutline />, path: "/postjob" },
-    { name: "Posted Jobs", icon: <IoBriefcaseOutline />, path: "/employer/posted-jobs" },
     { name: "Applicants", icon: <BsCardChecklist />, path: "/employer/applicants" },
-    { name: "Job Insight", icon: <AiOutlineBarChart /> },
     { name: "Resources", icon: <LuNotebookText /> },
-    { name: "Resume Builder", icon: <FaRegFileLines /> },
     { name: "Companies", icon: <BsBuildings /> },
-    { name: "Events", icon: <SlEvent /> }
+    { name: "Events", icon: <SlEvent />, path: "/employer/eventpage", premium: true } // Premium gem
   ];
 
   return (
@@ -32,22 +24,31 @@ const NavigationMenu = () => {
       <ul className="space-y-0">
         {menuItems.map((item, index) => (
           <li key={index}>
-            {/* Conditionally render Link or button based on if a path exists */}
             {item.path ? (
               <Link
                 to={item.path}
-                className="w-full flex items-center p-2 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
+                className="w-full flex items-center justify-between p-2 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
               >
-                <span className="mr-3">{item.icon}</span>
-                <span>{item.name}</span>
+                <span className="flex items-center">
+                  <span className="mr-3">{item.icon}</span>
+                  <span>{item.name}</span>
+                </span>
+                {item.premium && (
+                  <FaGem className="text-pink-500 text-xl" /> // Right-side premium icon
+                )}
               </Link>
             ) : (
               <button
-                className="w-full flex items-center p-2 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
-                onClick={() => console.log(`Navigating to ${item.name}`)} // Fallback for items without a path
+                className="w-full flex items-center justify-between p-2 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-[#003983] transition-colors"
+                onClick={() => console.log(`Navigating to ${item.name}`)}
               >
-                <span className="mr-3">{item.icon}</span>
-                <span>{item.name}</span>
+                <span className="flex items-center">
+                  <span className="mr-3">{item.icon}</span>
+                  <span>{item.name}</span>
+                </span>
+                {item.premium && (
+                  <FaGem className="text-pink-500 text-xl" />
+                )}
               </button>
             )}
           </li>

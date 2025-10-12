@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { MdKeyboardArrowDown } from "react-icons/md";
-import SearchFilters from "./SearchFilters"; // Assuming this is for additional filters, not part of initial search form
 
 const JobSearchForm = () => {
   const navigate = useNavigate();
@@ -10,15 +9,15 @@ const JobSearchForm = () => {
   const [title, setTitle] = useState(searchParams.get("title") || "");
   const [location, setLocation] = useState(searchParams.get("location") || "");
   const [selectedClassifications, setSelectedClassifications] = useState(
-    searchParams.get("classification") ? [searchParams.get("classification")] : []
+    searchParams.get("classification")
+      ? [searchParams.get("classification")]
+      : []
   );
   const [showClassification, setShowClassification] = useState(false);
 
   const locationRef = useRef(null);
-  // Ref for the classification dropdown itself to handle click outside
   const classificationDropdownRef = useRef(null);
   const classificationButtonRef = useRef(null);
-
 
   const classifications = [
     "Information & Communication Technology",
@@ -27,13 +26,14 @@ const JobSearchForm = () => {
     "Education & Training",
   ];
 
-  // --- Click outside hook for Classification Dropdown ---
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
         showClassification &&
-        classificationDropdownRef.current && !classificationDropdownRef.current.contains(event.target) &&
-        classificationButtonRef.current && !classificationButtonRef.current.contains(event.target)
+        classificationDropdownRef.current &&
+        !classificationDropdownRef.current.contains(event.target) &&
+        classificationButtonRef.current &&
+        !classificationButtonRef.current.contains(event.target)
       ) {
         setShowClassification(false);
       }
@@ -46,19 +46,17 @@ const JobSearchForm = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [showClassification]);
-  // --- End click outside hook ---
-
 
   useEffect(() => {
-    // Ensure google maps API is loaded before initializing autocomplete
     if (!window.google || !window.google.maps || !window.google.maps.places) {
-      console.warn("Google Maps Places API not loaded. Autocomplete will not function.");
+      console.warn("Google Maps Places API not loaded.");
       return;
     }
 
-    const autocomplete = new window.google.maps.places.Autocomplete(locationRef.current, {
-      types: ["(cities)"], // restrict to cities
-    });
+    const autocomplete = new window.google.maps.places.Autocomplete(
+      locationRef.current,
+      { types: ["(cities)"] }
+    );
 
     autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
@@ -68,7 +66,9 @@ const JobSearchForm = () => {
 
   const toggleClassification = (item) => {
     setSelectedClassifications((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+      prev.includes(item)
+        ? prev.filter((i) => i !== item)
+        : [...prev, item]
     );
   };
 
@@ -77,10 +77,9 @@ const JobSearchForm = () => {
     const query = new URLSearchParams();
     if (title) query.set("title", title);
     if (location) query.set("location", location);
-    // When multiple classifications are allowed, you might want to join them differently
-    // For now, based on your previous code, it only sends the first selected one.
     if (selectedClassifications.length > 0)
       query.set("classification", selectedClassifications[0]);
+
     navigate(`/jobs?${query.toString()}`);
   };
 
@@ -107,21 +106,19 @@ const JobSearchForm = () => {
         <div className="relative w-full md:w-80">
           <button
             type="button"
-            ref={classificationButtonRef} // Attach ref here
+            ref={classificationButtonRef}
             onClick={() => setShowClassification(!showClassification)}
             className="w-full p-3 border border-gray-300 rounded-lg flex justify-between items-center bg-white text-gray-500"
           >
             {selectedClassifications.length > 0
               ? selectedClassifications.join(", ")
               : "Classification"}
-            <span>
-              <MdKeyboardArrowDown className="text-lg" />
-            </span>
+            <MdKeyboardArrowDown className="text-lg" />
           </button>
 
           {showClassification && (
             <div
-              ref={classificationDropdownRef} // Attach ref here
+              ref={classificationDropdownRef}
               className="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg p-2 max-h-60 overflow-y-auto"
             >
               {classifications.map((item, idx) => (
@@ -149,8 +146,6 @@ const JobSearchForm = () => {
           Search Job
         </button>
       </div>
-
-      <SearchFilters />
     </form>
   );
 };

@@ -6,8 +6,14 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
   const [editableData, setEditableData] = useState(formData);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setEditableData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, files } = e.target;
+
+    // If file input, save file, else save value
+    if (files) {
+      setEditableData((prev) => ({ ...prev, [name]: files[0] }));
+    } else {
+      setEditableData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleUpdate = () => {
@@ -26,7 +32,7 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
     company = "",
     logo = null,
     applyBefore = "",
-    videoUrl = "",
+    video_path = null,
     keyPoints = [],
   } = editableData;
 
@@ -105,11 +111,11 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
               className="w-full border border-gray-300 rounded p-2"
             />
             <input
-              name="videoUrl"
-              value={videoUrl}
+              type="file"
+              name="video_path"
+              accept="video/*"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded p-2"
-              placeholder="Video URL"
             />
           </div>
         ) : (
@@ -135,12 +141,9 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
               <p>
                 <strong>Apply Before:</strong> {applyBefore}
               </p>
-              {videoUrl && (
+              {video_path && (
                 <p>
-                  <strong>Video URL:</strong>{" "}
-                  <a href={videoUrl} className="text-blue-600 underline">
-                    {videoUrl}
-                  </a>
+                  <strong>Video:</strong> {video_path.name}
                 </p>
               )}
             </div>
@@ -176,11 +179,12 @@ const JobStep3 = ({ formData = {}, onBack, onNext, setFormData }) => {
           Previous
         </button>
         <button
-          onClick={onNext}
+          onClick={() => onNext(editableData)}
           className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
         >
           Next
         </button>
+
       </div>
     </div>
   );

@@ -10,6 +10,10 @@ import EmployerRegisterPage from "./pages/EmployerRegisterPage";
 import PostJobPage from "./pages/PostJobPage";
 import JobseekerProfile from "./pages/JobseekerProfile";
 import EmployerDashboard from "./pages/EmployerDashboard";
+// Event
+import EventCard from "./components/EmployerDashboard/EventCard.jsx";
+import EventPage from "./pages/EventPage.jsx";
+import EventDetailsPage from './pages/EventDetailsPage';
 import JobSeekerDashboard from "./pages/JobSeekerDashboard";
 import StaffingDashboard from "./pages/StaffingDashboard";
 import EditProfileHeaderPage from "./pages/EditProfileHeaderPage";
@@ -30,30 +34,34 @@ import ApplicantsPage from "./pages/ApplicantsPage.jsx";
 import ApplicantDetailsPage from "./pages/ApplicantDetailsPage.jsx";
 import JobApplicantsListPage from './pages/JobApplicantsListPage';
 import ScheduleInterviewPage from './pages/ScheduleInterviewPage';
-
-// NEW IMPORTS FOR EMPLOYER PROFILE
+// Employer Profile
 import EmployerProfilePage from "./pages/EmployerProfilePage.jsx";
 import EditEmployerProfileHeaderPage from "./pages/EditEmployerProfileHeaderPage.jsx";
 import EditEmployerUserProfilePage from "./pages/EditEmployerUserProfilePage.jsx";
-import { EmployerProfileProvider } from "./context/EmployerProfileContext.jsx"; // New context
+import { EmployerProfileProvider } from "./context/EmployerProfileContext.jsx";
+// Admin
+import AdminRegister from "./pages/AdminRegister";
+import AdminLogin from "./pages/AdminLogin.jsx";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
+// Add this import at the top with other pages
+import EmployerSubscriptionPage from "./pages/EmployerSubscriptionPage.jsx";
+
 
 const App = () => {
   return (
     <Router>
       <AuthProvider>
-        {/* Jobseeker Profile Context */}
         <ProfileProvider>
-          {/* Employer Profile Context (nested for specific employer routes) */}
           <EmployerProfileProvider>
-            <Layout>
-              <Routes>
+            <Routes>
+              {/* ---------- USER/EMPLOYER ROUTES WITH LAYOUT ---------- */}
+              <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/jobs" element={<JobSearchPage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/employerregister" element={<EmployerRegisterPage />} />
                 <Route path="/postjob" element={<PostJobPage />} />
-                {/* Jobseeker Profile Route */}
                 <Route path="/profile" element={<JobseekerProfile />} />
                 <Route path="/employer/dashboard" element={<EmployerDashboard />} />
                 <Route path="/jobseeker/dashboard/*" element={<JobSeekerDashboard />} />
@@ -67,7 +75,6 @@ const App = () => {
                 <Route path="/profile/edit-memberships" element={<EditMembershipList />} />
                 <Route path="/profile/edit-certifications" element={<EditCertificationList />} />
                 <Route path="/profile/edit-licenses" element={<EditLicenseList />} />
-                {/* EMPLOYER ROUTES */}
                 <Route path="/employer/posted-jobs" element={<PostedJobsPage />} />
                 <Route path="/employer/jobs/:jobId/edit" element={<div>Employer Edit Job Page (Coming Soon)</div>} />
                 <Route path="/employer/post-job" element={<div>Employer Post New Job Page (Coming Soon)</div>} />
@@ -75,14 +82,25 @@ const App = () => {
                 <Route path="/employer/applicants/:applicationId" element={<ApplicantDetailsPage />} />
                 <Route path="/employer/jobs/:jobId/applicants" element={<JobApplicantsListPage />} />
                 <Route path="/employer/applicants/:applicationId/schedule-interview" element={<ScheduleInterviewPage />} />
-
-                {/* NEW EMPLOYER PROFILE ROUTES */}
+                {/* Event */}
+                <Route path="/employer/EventCard" element={<EventCard />} />
+                <Route path="/employer/eventpage" element={<EventPage />} />
+                <Route path="/employer/event/:id" element={<EventDetailsPage />} />
+                <Route path="/events/:slug" element={<EventDetailsPage />} />
+                {/* Employer Profile */}
                 <Route path="/employer/profile" element={<EmployerProfilePage />} />
                 <Route path="/employer/profile/edit-company-header" element={<EditEmployerProfileHeaderPage />} />
                 <Route path="/employer/profile/edit-user-profile" element={<EditEmployerUserProfilePage />} />
-              </Routes>
-              <ToastContainer position="bottom-right" autoClose={3000} />
-            </Layout>
+              </Route>
+
+              {/* ---------- ADMIN ROUTES (NO LAYOUT / NO HEADER-FOOTER) ---------- */}
+              <Route path="/admin/register" element={<AdminRegister />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/employer-subscriptions" element={<EmployerSubscriptionPage />} />
+            </Routes>
+
+            <ToastContainer position="bottom-right" autoClose={3000} />
           </EmployerProfileProvider>
         </ProfileProvider>
       </AuthProvider>
